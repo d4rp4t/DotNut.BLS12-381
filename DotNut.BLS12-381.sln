@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNut.BLS12-381", "DotNut.BLS12-381\DotNut.BLS12-381.csproj", "{DE6EA172-832C-4D25-BB1E-8BCE754DFEF0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNut.BLS12-381.Tests", "DotNut.BLS12-381.Tests\DotNut.BLS12-381.Tests.csproj", "{276BD08D-0B3B-44E9-91B4-EC9754B87EF0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DE6EA172-832C-4D25-BB1E-8BCE754DFEF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE6EA172-832C-4D25-BB1E-8BCE754DFEF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE6EA172-832C-4D25-BB1E-8BCE754DFEF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE6EA172-832C-4D25-BB1E-8BCE754DFEF0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{276BD08D-0B3B-44E9-91B4-EC9754B87EF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{276BD08D-0B3B-44E9-91B4-EC9754B87EF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{276BD08D-0B3B-44E9-91B4-EC9754B87EF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{276BD08D-0B3B-44E9-91B4-EC9754B87EF0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
