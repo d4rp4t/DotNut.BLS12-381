@@ -2,6 +2,16 @@ namespace DotNut.BLS12_381.Tower;
 
 public readonly partial struct Fp12
 {
+    private static readonly System.Numerics.BigInteger P = System.Numerics.BigInteger.Parse(
+        "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab",
+        System.Globalization.NumberStyles.AllowHexSpecifier
+    );
+    private static readonly System.Numerics.BigInteger R = System.Numerics.BigInteger.Parse(
+        "73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
+        System.Globalization.NumberStyles.AllowHexSpecifier
+    );
+    private static readonly Fp6[] FrobeniusCoeffC1 = BuildFrobeniusCoeffC1();
+
     public static Fp12 Add(Fp12 a, Fp12 b)
     {
         return new Fp12(
@@ -66,14 +76,11 @@ public readonly partial struct Fp12
 
     public static Fp12 FrobeniusMap(Fp12 a, int power)
     {
-        // Functional (not optimized): x -> x^(p^power)
-        var p = System.Numerics.BigInteger.Parse(
-            "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab",
-            System.Globalization.NumberStyles.AllowHexSpecifier
+        var idx = ((power % 12) + 12) % 12;
+        return new Fp12(
+            Fp6.FrobeniusMap(a.C0, power),
+            Fp6.Multiply(Fp6.FrobeniusMap(a.C1, power), FrobeniusCoeffC1[idx])
         );
-        var exp = System.Numerics.BigInteger.One;
-        for (var i = 0; i < power; i++) exp *= p;
-        return Pow(a, exp);
     }
 
     public static Fp12 CyclotomicSquare(Fp12 a) => Square(a);
@@ -82,17 +89,34 @@ public readonly partial struct Fp12
 
     public static Fp12 FinalExponentiation(Fp12 a)
     {
-        // Generic final exponent for GT: (p^12 - 1) / r
-        // p, r per BLS12-381 parameters (RFC 9380 / EIP-2537)
-        var p = System.Numerics.BigInteger.Parse(
-            "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab",
-            System.Globalization.NumberStyles.AllowHexSpecifier
-        );
-        var r = System.Numerics.BigInteger.Parse(
-            "73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
-            System.Globalization.NumberStyles.AllowHexSpecifier
-        );
-        var exp = (System.Numerics.BigInteger.Pow(p, 12) - 1) / r;
-        return Pow(a, exp);
+        // Easy part: f^((p^6 - 1)(p^2 + 1))
+        var t0 = Invert(a);
+        var t1 = Conjugate(a);
+        var f = Multiply(t1, t0);
+        f = Multiply(FrobeniusMap(f, 2), f);
+
+        // Hard part: f^((p^4 - p^2 + 1)/r) - correct generic path.
+        var hardExp = (System.Numerics.BigInteger.Pow(P, 4) - System.Numerics.BigInteger.Pow(P, 2) + 1) / R;
+        return Pow(f, hardExp);
     }
+
+    public static Fp12 Conjugate(Fp12 a)
+    {
+        return new Fp12(a.C0, Fp6.Negate(a.C1));
+    }
+
+    private static Fp6[] BuildFrobeniusCoeffC1()
+    {
+        var arr = new Fp6[12];
+        arr[0] = Fp6.One;
+        var v = new Fp6(Fp2.Zero, Fp2.One, Fp2.Zero);
+        for (var i = 1; i < 12; i++)
+        {
+            var pPow = System.Numerics.BigInteger.Pow(P, i);
+            var e = (pPow - 1) / 2;
+            arr[i] = Fp6.Pow(v, e);
+        }
+        return arr;
+    }
+
 }

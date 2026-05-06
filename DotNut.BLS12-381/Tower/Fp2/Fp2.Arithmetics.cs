@@ -68,4 +68,20 @@ public readonly partial struct Fp2
         // For BLS12-381 base field p, u^p = -u
         return (power & 1) == 0 ? a : new Fp2(a.C0, Fp.Negate(a.C1));
     }
+    
+    public static Fp2 Pow(Fp2 value, System.Numerics.BigInteger exponent)
+    {
+        if (exponent.Sign < 0) throw new ArgumentOutOfRangeException(nameof(exponent));
+        var result = One;
+        var baseValue = value;
+        var e = exponent;
+        while (e > 0)
+        {
+            if (!e.IsEven)
+                result = Multiply(result, baseValue);
+            baseValue = Square(baseValue);
+            e >>= 1;
+        }
+        return result;
+    }
 }

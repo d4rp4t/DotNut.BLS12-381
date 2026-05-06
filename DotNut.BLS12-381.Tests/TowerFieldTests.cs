@@ -120,6 +120,29 @@ public sealed class TowerFieldTests
         Assert.True(Fp12.Equal(Fp12.One, Fp12.FinalExponentiation(Fp12.One)));
     }
 
+    [Fact]
+    public void Fp12_FinalExponentiation_ShouldMatch_GenericExponent_Reference()
+    {
+        // Cross-check against direct definition: f^((p^12 - 1)/r)
+        // Source for decomposition/definition:
+        // https://github.com/zkcrypto/bls12_381/blob/main/src/pairings.rs
+        var p = System.Numerics.BigInteger.Parse(
+            "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab",
+            System.Globalization.NumberStyles.AllowHexSpecifier
+        );
+        var r = System.Numerics.BigInteger.Parse(
+            "73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
+            System.Globalization.NumberStyles.AllowHexSpecifier
+        );
+        var exp = (System.Numerics.BigInteger.Pow(p, 12) - 1) / r;
+
+        var random = new Random(404);
+        var a = RandomFp12NonZero(random);
+        var optimized = Fp12.FinalExponentiation(a);
+        var generic = Fp12.Pow(a, exp);
+        Assert.True(Fp12.Equal(optimized, generic));
+    }
+
     private static Fp RandomFp(Random random)
     {
         var bytes = new byte[48];
