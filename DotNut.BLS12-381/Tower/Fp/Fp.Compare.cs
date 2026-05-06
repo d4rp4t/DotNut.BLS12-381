@@ -4,12 +4,15 @@ public readonly partial struct Fp
 {
     public static int Compare(Fp a, Fp b)
     {
-        if (a.L5 != b.L5) return a.L5 > b.L5 ? 1 : -1;
-        if (a.L4 != b.L4) return a.L4 > b.L4 ? 1 : -1;
-        if (a.L3 != b.L3) return a.L3 > b.L3 ? 1 : -1;
-        if (a.L2 != b.L2) return a.L2 > b.L2 ? 1 : -1;
-        if (a.L1 != b.L1) return a.L1 > b.L1 ? 1 : -1;
-        if (a.L0 != b.L0) return a.L0 > b.L0 ? 1 : -1;
+        var ca = ToCanonical(a);
+        var cb = ToCanonical(b);
+
+        if (ca.L5 != cb.L5) return ca.L5 > cb.L5 ? 1 : -1;
+        if (ca.L4 != cb.L4) return ca.L4 > cb.L4 ? 1 : -1;
+        if (ca.L3 != cb.L3) return ca.L3 > cb.L3 ? 1 : -1;
+        if (ca.L2 != cb.L2) return ca.L2 > cb.L2 ? 1 : -1;
+        if (ca.L1 != cb.L1) return ca.L1 > cb.L1 ? 1 : -1;
+        if (ca.L0 != cb.L0) return ca.L0 > cb.L0 ? 1 : -1;
         return 0;
     }
 
@@ -25,7 +28,13 @@ public readonly partial struct Fp
     
     internal static bool GreaterThanOrEqual(Fp a, Fp b)
     {
-        return Compare(a, b) >= 0;
+        if (a.L5 != b.L5) return a.L5 > b.L5;
+        if (a.L4 != b.L4) return a.L4 > b.L4;
+        if (a.L3 != b.L3) return a.L3 > b.L3;
+        if (a.L2 != b.L2) return a.L2 > b.L2;
+        if (a.L1 != b.L1) return a.L1 > b.L1;
+        if (a.L0 != b.L0) return a.L0 > b.L0;
+        return true;
     }
 
     public static bool Equal(Fp a, Fp b)

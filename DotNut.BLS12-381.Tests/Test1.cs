@@ -7,7 +7,15 @@ namespace DotNut.BLS12_381.Tests;
 
 public sealed class Test1
 {
-    private static readonly BigInteger Modulus = ToBigInteger(Fp.Modulus);
+    // Source (official modulus p for BLS12-381 Fp):
+    // RFC 9380, section 8.8.1
+    // https://www.rfc-editor.org/rfc/rfc9380#section-8.8.1
+    // Cross-check same constant in noble-curves:
+    // https://github.com/paulmillr/noble-curves/blob/main/src/bls12-381.ts
+    private static readonly BigInteger Modulus = BigInteger.Parse(
+        "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab",
+        System.Globalization.NumberStyles.AllowHexSpecifier
+    );
 
     [Fact]
     public void Add_ShouldMatchBigInteger_ModP()
@@ -34,15 +42,13 @@ public sealed class Test1
     }
 
     [Fact]
-    public void Substract_Alias_ShouldEqualSubtract()
+    public void Subtract_ShouldWork_ForSimpleCase()
     {
-        var a = new Fp(123, 456, 789, 101112, 131415, 161718);
-        var b = new Fp(10, 20, 30, 40, 50, 60);
+        var a = FromBigInteger(123) ;
+        var b = FromBigInteger(10);
 
         var subtract = Fp.Subtract(a, b);
-        var substract = Fp.Substract(a, b);
-
-        Assert.Equal(ToBigInteger(subtract), ToBigInteger(substract));
+        Assert.Equal(new BigInteger(113), ToBigInteger(subtract));
     }
 
     [Fact]
@@ -61,6 +67,80 @@ public sealed class Test1
             Assert.Equal(addExpected, ToBigInteger(Fp.Add(a, b)));
             Assert.Equal(subExpected, ToBigInteger(Fp.Subtract(a, b)));
         }
+    }
+
+    [Fact]
+    public void Multiply_ShouldMatchBigInteger_ModP()
+    {
+        var a = FromBigInteger(Modulus - 1);
+        var b = FromBigInteger(Modulus - 1);
+
+        var expected = (ToBigInteger(a) * ToBigInteger(b)) % Modulus;
+        var actual = ToBigInteger(Fp.Multiply(a, b));
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void Multiply_Randomized_ShouldMatchBigInteger_ModP()
+    {
+        var random = new Random(54321);
+
+        for (var i = 0; i < 250; i++)
+        {
+            var a = RandomCanonicalFp(random);
+            var b = RandomCanonicalFp(random);
+
+            var expected = (ToBigInteger(a) * ToBigInteger(b)) % Modulus;
+            var actual = ToBigInteger(Fp.Multiply(a, b));
+
+            Assert.Equal(expected, actual);
+        }
+    }
+
+    [Fact]
+    public void Square_Randomized_ShouldMatchBigInteger_ModP()
+    {
+        var random = new Random(98765);
+
+        for (var i = 0; i < 250; i++)
+        {
+            var a = RandomCanonicalFp(random);
+            var expected = (ToBigInteger(a) * ToBigInteger(a)) % Modulus;
+            var actual = ToBigInteger(Fp.Square(a));
+            Assert.Equal(expected, actual);
+        }
+    }
+
+    [Fact]
+    public void Negate_ShouldMatchBigInteger_ModP()
+    {
+        var random = new Random(24680);
+        for (var i = 0; i < 200; i++)
+        {
+            var a = RandomCanonicalFp(random);
+            var expected = PositiveMod(-ToBigInteger(a), Modulus);
+            Assert.Equal(expected, ToBigInteger(Fp.Negate(a)));
+        }
+        Assert.Equal(BigInteger.Zero, ToBigInteger(Fp.Negate(Fp.Zero)));
+    }
+
+    [Fact]
+    public void Invert_Randomized_ShouldMatchBigInteger_ModP()
+    {
+        var random = new Random(112233);
+        for (var i = 0; i < 120; i++)
+        {
+            var a = RandomNonZeroCanonicalFp(random);
+            var inv = Fp.Invert(a);
+            Assert.Equal(BigInteger.One, ToBigInteger(Fp.Multiply(a, inv)));
+        }
+    }
+
+    [Fact]
+    public void Invert_Zero_ShouldThrow()
+    {
+        Assert.Throws<DivideByZeroException>(() => Fp.Invert(Fp.Zero));
     }
 
     [Fact]
@@ -86,9 +166,73 @@ public sealed class Test1
     [Fact]
     public void Modulus_ShouldMatch_Rfc9380_Bls12_381_P()
     {
+        // Source:
+        // https://www.rfc-editor.org/rfc/rfc9380#section-8.8.1
         const string pHex = "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab";
         var expected = BigInteger.Parse(pHex, System.Globalization.NumberStyles.AllowHexSpecifier);
-        Assert.Equal(expected, ToBigInteger(Fp.Modulus));
+        Assert.Equal(expected, RawToBigInteger(Fp.Modulus));
+    }
+
+    [Fact]
+    public void ToBytes_And_FromBytes_BigEndian_RoundTrip()
+    {
+        var random = new Random(777);
+        for (var i = 0; i < 100; i++)
+        {
+            var a = RandomCanonicalFp(random);
+            var bytes = Fp.ToBytesBigEndian(a);
+            var b = Fp.FromBytesBigEndian(bytes);
+            Assert.Equal(ToBigInteger(a), ToBigInteger(b));
+        }
+    }
+
+    [Fact]
+    public void FromBytesBigEndian_ShouldReject_NonCanonical_Modulus()
+    {
+        // Canonical encoding must be strictly < p (reject p itself).
+        // Source for p:
+        // https://www.rfc-editor.org/rfc/rfc9380#section-8.8.1
+        const string pHex = "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab";
+        byte[] bytes = Convert.FromHexString(pHex);
+        Assert.Throws<ArgumentOutOfRangeException>(() => Fp.FromBytesBigEndian(bytes));
+        Assert.False(Fp.TryFromBytesBigEndian(bytes, out _));
+    }
+
+    [Fact]
+    public void FromBytesBigEndian_ShouldParse_One()
+    {
+        var bytes = new byte[48];
+        bytes[47] = 1;
+        var one = Fp.FromBytesBigEndian(bytes);
+        Assert.Equal(BigInteger.One, ToBigInteger(one));
+    }
+
+    [Fact]
+    public void ToBytes_And_FromBytes_LittleEndian_RoundTrip()
+    {
+        var random = new Random(778);
+        for (var i = 0; i < 100; i++)
+        {
+            var a = RandomCanonicalFp(random);
+            var bytes = Fp.ToBytesLittleEndian(a);
+            var b = Fp.FromBytesLittleEndian(bytes);
+            Assert.Equal(ToBigInteger(a), ToBigInteger(b));
+        }
+    }
+
+    [Fact]
+    public void FromBytesLittleEndian_ShouldReject_NonCanonical_Modulus()
+    {
+        // Same canonical rejection test as BE, but LE byte order.
+        // Source for p:
+        // https://www.rfc-editor.org/rfc/rfc9380#section-8.8.1
+        const string pHex = "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab";
+        byte[] be = Convert.FromHexString(pHex);
+        byte[] bytes = new byte[48];
+        for (int i = 0; i < 48; i++) bytes[i] = be[47 - i];
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => Fp.FromBytesLittleEndian(bytes));
+        Assert.False(Fp.TryFromBytesLittleEndian(bytes, out _));
     }
 
     private static Fp RandomCanonicalFp(Random random)
@@ -96,7 +240,22 @@ public sealed class Test1
         return FromBigInteger(RandomBelow(random, Modulus));
     }
 
+    private static Fp RandomNonZeroCanonicalFp(Random random)
+    {
+        while (true)
+        {
+            var v = RandomCanonicalFp(random);
+            if (!Fp.Equal(v, Fp.Zero))
+                return v;
+        }
+    }
+
     private static BigInteger ToBigInteger(Fp value)
+    {
+        return new BigInteger(Fp.ToBytesBigEndian(value), isUnsigned: true, isBigEndian: true);
+    }
+
+    private static BigInteger RawToBigInteger(Fp value)
     {
         var l0 = ReadLimb(value, "L0");
         var l1 = ReadLimb(value, "L1");
@@ -117,13 +276,13 @@ public sealed class Test1
     private static Fp FromBigInteger(BigInteger value)
     {
         var v = PositiveMod(value, Modulus);
-        ulong l0 = (ulong)(v & ulong.MaxValue);
-        ulong l1 = (ulong)((v >> 64) & ulong.MaxValue);
-        ulong l2 = (ulong)((v >> 128) & ulong.MaxValue);
-        ulong l3 = (ulong)((v >> 192) & ulong.MaxValue);
-        ulong l4 = (ulong)((v >> 256) & ulong.MaxValue);
-        ulong l5 = (ulong)((v >> 320) & ulong.MaxValue);
-        return new Fp(l0, l1, l2, l3, l4, l5);
+        var bytes = v.ToByteArray(isUnsigned: true, isBigEndian: true);
+        if (bytes.Length > 48)
+            throw new InvalidOperationException("Value does not fit into 48 bytes.");
+
+        var padded = new byte[48];
+        Buffer.BlockCopy(bytes, 0, padded, 48 - bytes.Length, bytes.Length);
+        return Fp.FromBytesBigEndian(padded);
     }
 
     private static BigInteger RandomBelow(Random random, BigInteger modulus)
