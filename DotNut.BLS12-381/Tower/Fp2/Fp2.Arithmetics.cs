@@ -10,7 +10,7 @@ public readonly partial struct Fp2
         );
     }
 
-    public static Fp2 Sub(Fp2 a, Fp2 b)
+    public static Fp2 Subtract(Fp2 a, Fp2 b)
     {
         return new Fp2(
             Fp.Subtract(a.C0, b.C0),
@@ -39,7 +39,8 @@ public readonly partial struct Fp2
         Fp a0a0 = Fp.Square(a.C0);
         Fp a1a1 = Fp.Square(a.C1);
         Fp c0 = Fp.Subtract(a0a0, a1a1);
-        Fp c1 = Fp.Add(Fp.Multiply(a.C0, a.C1), Fp.Multiply(a.C0, a.C1));
+        Fp a0a1 = Fp.Multiply(a.C0, a.C1);
+        Fp c1 = Fp.Add(a0a1, a0a1);
         return new Fp2(c0, c1);
     }
 

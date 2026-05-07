@@ -20,9 +20,9 @@ public readonly partial struct Fp6
     public static Fp6 Subtract(Fp6 a, Fp6 b)
     {
         return new Fp6(
-            Fp2.Sub(a.C0, b.C0),
-            Fp2.Sub(a.C1, b.C1),
-            Fp2.Sub(a.C2, b.C2)
+            Fp2.Subtract(a.C0, b.C0),
+            Fp2.Subtract(a.C1, b.C1),
+            Fp2.Subtract(a.C2, b.C2)
         );
     }
 
@@ -47,9 +47,9 @@ public readonly partial struct Fp6
         Fp2 t1 = Fp2.Multiply(a.C1, b.C1);
         Fp2 t2 = Fp2.Multiply(a.C2, b.C2);
 
-        Fp2 c0 = Fp2.Add(t0, Fp2.MultiplyByNonResidue(Fp2.Sub(Fp2.Sub(Fp2.Multiply(Fp2.Add(a.C1, a.C2), Fp2.Add(b.C1, b.C2)), t1), t2)));
-        Fp2 c1 = Fp2.Add(Fp2.Sub(Fp2.Sub(Fp2.Multiply(Fp2.Add(a.C0, a.C1), Fp2.Add(b.C0, b.C1)), t0), t1), Fp2.MultiplyByNonResidue(t2));
-        Fp2 c2 = Fp2.Add(t1, Fp2.Sub(Fp2.Sub(Fp2.Multiply(Fp2.Add(a.C0, a.C2), Fp2.Add(b.C0, b.C2)), t0), t2));
+        Fp2 c0 = Fp2.Add(t0, Fp2.MultiplyByNonResidue(Fp2.Subtract(Fp2.Subtract(Fp2.Multiply(Fp2.Add(a.C1, a.C2), Fp2.Add(b.C1, b.C2)), t1), t2)));
+        Fp2 c1 = Fp2.Add(Fp2.Subtract(Fp2.Subtract(Fp2.Multiply(Fp2.Add(a.C0, a.C1), Fp2.Add(b.C0, b.C1)), t0), t1), Fp2.MultiplyByNonResidue(t2));
+        Fp2 c2 = Fp2.Add(t1, Fp2.Subtract(Fp2.Subtract(Fp2.Multiply(Fp2.Add(a.C0, a.C2), Fp2.Add(b.C0, b.C2)), t0), t2));
 
         return new Fp6(c0, c1, c2);
     }
@@ -59,9 +59,9 @@ public readonly partial struct Fp6
     public static Fp6 Invert(Fp6 a)
     {
         // Standard inversion for Fp6 over Fp2 with v^3 = xi (xi = u+1)
-        Fp2 c0 = Fp2.Sub(Fp2.Square(a.C0), Fp2.MultiplyByNonResidue(Fp2.Multiply(a.C1, a.C2)));
-        Fp2 c1 = Fp2.Sub(Fp2.MultiplyByNonResidue(Fp2.Square(a.C2)), Fp2.Multiply(a.C0, a.C1));
-        Fp2 c2 = Fp2.Sub(Fp2.Square(a.C1), Fp2.Multiply(a.C0, a.C2));
+        Fp2 c0 = Fp2.Subtract(Fp2.Square(a.C0), Fp2.MultiplyByNonResidue(Fp2.Multiply(a.C1, a.C2)));
+        Fp2 c1 = Fp2.Subtract(Fp2.MultiplyByNonResidue(Fp2.Square(a.C2)), Fp2.Multiply(a.C0, a.C1));
+        Fp2 c2 = Fp2.Subtract(Fp2.Square(a.C1), Fp2.Multiply(a.C0, a.C2));
 
         Fp2 t = Fp2.Add(Fp2.Multiply(a.C0, c0), Fp2.MultiplyByNonResidue(Fp2.Add(Fp2.Multiply(a.C2, c1), Fp2.Multiply(a.C1, c2))));
         Fp2 inv = Fp2.Invert(t);

@@ -46,6 +46,20 @@ public sealed class TowerFieldTests
     }
 
     [Fact]
+    public void Fp2_Compare_ShouldBeConsistentWith_Equality()
+    {
+        var random = new Random(104);
+        for (var i = 0; i < 120; i++)
+        {
+            var a = RandomFp2(random);
+            var b = RandomFp2(random);
+            var cmp = Fp2.Compare(a, b);
+            Assert.Equal(Fp2.Equal(a, b), cmp == 0);
+            Assert.Equal(-cmp, Fp2.Compare(b, a));
+        }
+    }
+
+    [Fact]
     public void Fp6_Invert_ShouldSatisfy_a_times_inv_a_is_one()
     {
         var random = new Random(201);
@@ -77,6 +91,31 @@ public sealed class TowerFieldTests
         {
             var a = RandomFp6(random);
             Assert.True(Fp6.Equal(Fp6.MulByNonResidue(a), Fp6.Multiply(a, v)));
+        }
+    }
+
+    [Fact]
+    public void Fp6_Compare_ShouldBeConsistentWith_Equality()
+    {
+        var random = new Random(204);
+        for (var i = 0; i < 80; i++)
+        {
+            var a = RandomFp6(random);
+            var b = RandomFp6(random);
+            var cmp = Fp6.Compare(a, b);
+            Assert.Equal(Fp6.Equal(a, b), cmp == 0);
+            Assert.Equal(-cmp, Fp6.Compare(b, a));
+        }
+    }
+
+    [Fact]
+    public void Fp6_FrobeniusPowerSix_ShouldBeIdentity()
+    {
+        var random = new Random(205);
+        for (var i = 0; i < 80; i++)
+        {
+            var a = RandomFp6(random);
+            Assert.True(Fp6.Equal(a, Fp6.FrobeniusMap(a, 6)));
         }
     }
 
@@ -121,6 +160,31 @@ public sealed class TowerFieldTests
     }
 
     [Fact]
+    public void Fp12_Compare_ShouldBeConsistentWith_Equality()
+    {
+        var random = new Random(304);
+        for (var i = 0; i < 60; i++)
+        {
+            var a = RandomFp12(random);
+            var b = RandomFp12(random);
+            var cmp = Fp12.Compare(a, b);
+            Assert.Equal(Fp12.Equal(a, b), cmp == 0);
+            Assert.Equal(-cmp, Fp12.Compare(b, a));
+        }
+    }
+
+    [Fact]
+    public void Fp12_FrobeniusPowerTwelve_ShouldBeIdentity()
+    {
+        var random = new Random(305);
+        for (var i = 0; i < 60; i++)
+        {
+            var a = RandomFp12(random);
+            Assert.True(Fp12.Equal(a, Fp12.FrobeniusMap(a, 12)));
+        }
+    }
+
+    [Fact]
     public void Fp12_FinalExponentiation_ShouldMatch_GenericExponent_Reference()
     {
         // Cross-check against direct definition: f^((p^12 - 1)/r)
@@ -141,6 +205,26 @@ public sealed class TowerFieldTests
         var optimized = Fp12.FinalExponentiation(a);
         var generic = Fp12.Pow(a, exp);
         Assert.True(Fp12.Equal(optimized, generic));
+    }
+
+    [Fact]
+    public void Fp12_FinalExponentiation_Result_ShouldLieIn_R_Order_Subgroup()
+    {
+        // GT subgroup condition: z^r = 1 after final exponentiation.
+        // r source (BLS12-381 scalar field modulus):
+        // https://www.rfc-editor.org/rfc/rfc9380.html#appendix-J.4
+        var r = System.Numerics.BigInteger.Parse(
+            "73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
+            System.Globalization.NumberStyles.AllowHexSpecifier
+        );
+
+        var random = new Random(405);
+        for (var i = 0; i < 20; i++)
+        {
+            var a = RandomFp12NonZero(random);
+            var z = Fp12.FinalExponentiation(a);
+            Assert.True(Fp12.Equal(Fp12.Pow(z, r), Fp12.One));
+        }
     }
 
     private static Fp RandomFp(Random random)
