@@ -11,6 +11,8 @@ public sealed class G1Tests
         System.Globalization.NumberStyles.AllowHexSpecifier
     );
 
+    #region BasicProperties
+
     [Fact]
     public void Generator_ShouldBeOnCurve()
     {
@@ -22,36 +24,6 @@ public sealed class G1Tests
     {
         var inf = G1Projective.Infinity.ToAffine();
         Assert.True(inf.IsInfinity);
-    }
-
-    [Fact]
-    public void Double_ShouldMatch_AddSelf()
-    {
-        var g = G1Affine.Generator.ToProjective();
-        var d = G1Projective.Double(g).ToAffine();
-        var a = G1Projective.Add(g, g).ToAffine();
-        Assert.True(AffineEqual(d, a));
-    }
-
-    [Fact]
-    public void ScalarMul_SmallValues_ShouldBeConsistent()
-    {
-        var g = G1Affine.Generator.ToProjective();
-        var one = G1Projective.ScalarMultiply(g, new Scalar(1, 0, 0, 0)).ToAffine();
-        var two = G1Projective.ScalarMultiply(g, new Scalar(2, 0, 0, 0)).ToAffine();
-        var three = G1Projective.ScalarMultiply(g, new Scalar(3, 0, 0, 0)).ToAffine();
-
-        Assert.True(AffineEqual(one, G1Affine.Generator));
-        Assert.True(AffineEqual(two, G1Projective.Double(g).ToAffine()));
-        Assert.True(AffineEqual(three, G1Projective.Add(g, G1Projective.Double(g)).ToAffine()));
-    }
-
-    [Fact]
-    public void ScalarMul_Zero_ShouldReturn_Infinity()
-    {
-        var g = G1Affine.Generator.ToProjective();
-        var zero = G1Projective.ScalarMultiply(g, new Scalar(0, 0, 0, 0)).ToAffine();
-        Assert.True(zero.IsInfinity);
     }
 
     [Fact]
@@ -68,6 +40,19 @@ public sealed class G1Tests
         var g = G1Affine.Generator.ToProjective();
         Assert.True(AffineEqual(G1Projective.Add(g, G1Projective.Infinity).ToAffine(), g.ToAffine()));
         Assert.True(AffineEqual(G1Projective.Add(G1Projective.Infinity, g).ToAffine(), g.ToAffine()));
+    }
+
+    #endregion
+
+    #region Arithmetic
+
+    [Fact]
+    public void Double_ShouldMatch_AddSelf()
+    {
+        var g = G1Affine.Generator.ToProjective();
+        var d = G1Projective.Double(g).ToAffine();
+        var a = G1Projective.Add(g, g).ToAffine();
+        Assert.True(AffineEqual(d, a));
     }
 
     [Fact]
@@ -108,11 +93,39 @@ public sealed class G1Tests
         }
     }
 
+    #endregion
+
+    #region ScalarMultiply
+
+    [Fact]
+    public void ScalarMul_SmallValues_ShouldBeConsistent()
+    {
+        var g = G1Affine.Generator.ToProjective();
+        var one = G1Projective.ScalarMultiply(g, Scalar.One).ToAffine();
+        var two = G1Projective.ScalarMultiply(g, Scalar.FromBigInteger(2)).ToAffine();
+        var three = G1Projective.ScalarMultiply(g, Scalar.FromBigInteger(3)).ToAffine();
+
+        Assert.True(AffineEqual(one, G1Affine.Generator));
+        Assert.True(AffineEqual(two, G1Projective.Double(g).ToAffine()));
+        Assert.True(AffineEqual(three, G1Projective.Add(g, G1Projective.Double(g)).ToAffine()));
+    }
+
+    [Fact]
+    public void ScalarMul_Zero_ShouldReturn_Infinity()
+    {
+        var g = G1Affine.Generator.ToProjective();
+        var zero = G1Projective.ScalarMultiply(g, Scalar.Zero).ToAffine();
+        Assert.True(zero.IsInfinity);
+    }
+
+    #endregion
+
+    #region ExternalVectors
+
     [Fact]
     public void ExternalVector_Eip2537_G1Add_G1PlusG1_ShouldMatch()
     {
-        // Source:
-        // https://eips.ethereum.org/assets/eip-2537/add_G1_bls.json
+        // Source: https://eips.ethereum.org/assets/eip-2537/add_G1_bls.json
         var g = G1Affine.Generator.ToProjective();
         var result = G1Projective.Add(g, g).ToAffine();
         var expected = ParseG1FromEipOutput(
@@ -125,8 +138,7 @@ public sealed class G1Tests
     [Fact]
     public void ExternalVector_Eip2537_G1Mul_RandomScalar_ShouldMatch()
     {
-        // Source:
-        // https://eips.ethereum.org/assets/eip-2537/mul_G1_bls.json
+        // Source: https://eips.ethereum.org/assets/eip-2537/mul_G1_bls.json
         var g = G1Affine.Generator.ToProjective();
         var scalar = BigInteger.Parse("263dbd792f5b1be47ed85f8938c0f29586af0d3ac7b977f21c278fe1462040e3", System.Globalization.NumberStyles.AllowHexSpecifier);
         var result = G1Projective.ScalarMultiply(g, Scalar.FromBigInteger(scalar)).ToAffine();
@@ -140,12 +152,15 @@ public sealed class G1Tests
     [Fact]
     public void SubgroupCheck_RTimesGenerator_ShouldBeInfinity()
     {
-        // Source for subgroup order r:
-        // https://www.rfc-editor.org/rfc/rfc9380.html#appendix-J.4
+        // Source: https://www.rfc-editor.org/rfc/rfc9380.html#appendix-J.4
         var g = G1Affine.Generator.ToProjective();
         var result = G1Projective.ScalarMultiply(g, Scalar.FromBigInteger(GroupOrderR)).ToAffine();
         Assert.True(result.IsInfinity);
     }
+
+    #endregion
+
+    #region Helpers
 
     private static bool AffineEqual(G1Affine a, G1Affine b)
     {
@@ -204,4 +219,6 @@ public sealed class G1Tests
         }
         return result;
     }
+
+    #endregion
 }

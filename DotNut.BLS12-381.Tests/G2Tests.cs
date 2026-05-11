@@ -11,6 +11,8 @@ public sealed class G2Tests
         System.Globalization.NumberStyles.AllowHexSpecifier
     );
 
+    #region BasicProperties
+
     [Fact]
     public void Generator_ShouldBeOnCurve()
     {
@@ -33,6 +35,10 @@ public sealed class G2Tests
         Assert.True(AffineEqual(G2Projective.Add(G2Projective.Infinity, g).ToAffine(), g.ToAffine()));
     }
 
+    #endregion
+
+    #region Arithmetic
+
     [Fact]
     public void Double_ShouldMatch_AddSelf()
     {
@@ -41,12 +47,15 @@ public sealed class G2Tests
     }
 
     [Fact]
-    public void ScalarMul_SmallValues_ShouldBeConsistent()
+    public void Results_ShouldStayOnCurve()
     {
         var g = G2Affine.Generator.ToProjective();
-        Assert.True(AffineEqual(G2Projective.ScalarMultiply(g, new Scalar(0, 0, 0, 0)).ToAffine(), G2Affine.Infinity));
-        Assert.True(AffineEqual(G2Projective.ScalarMultiply(g, new Scalar(1, 0, 0, 0)).ToAffine(), G2Affine.Generator));
-        Assert.True(AffineEqual(G2Projective.ScalarMultiply(g, new Scalar(2, 0, 0, 0)).ToAffine(), G2Projective.Double(g).ToAffine()));
+        var p = g;
+        for (var i = 0; i < 16; i++)
+        {
+            p = G2Projective.Add(p, g);
+            Assert.True(p.IsOnCurve());
+        }
     }
 
     [Fact]
@@ -76,23 +85,27 @@ public sealed class G2Tests
         }
     }
 
+    #endregion
+
+    #region ScalarMultiply
+
     [Fact]
-    public void Results_ShouldStayOnCurve()
+    public void ScalarMul_SmallValues_ShouldBeConsistent()
     {
         var g = G2Affine.Generator.ToProjective();
-        var p = g;
-        for (var i = 0; i < 16; i++)
-        {
-            p = G2Projective.Add(p, g);
-            Assert.True(p.IsOnCurve());
-        }
+        Assert.True(AffineEqual(G2Projective.ScalarMultiply(g, Scalar.Zero).ToAffine(), G2Affine.Infinity));
+        Assert.True(AffineEqual(G2Projective.ScalarMultiply(g, Scalar.One).ToAffine(), G2Affine.Generator));
+        Assert.True(AffineEqual(G2Projective.ScalarMultiply(g, Scalar.FromBigInteger(2)).ToAffine(), G2Projective.Double(g).ToAffine()));
     }
+
+    #endregion
+
+    #region ExternalVectors
 
     [Fact]
     public void ExternalVector_Eip2537_G2Add_G2PlusG2_ShouldMatch()
     {
-        // Source:
-        // https://eips.ethereum.org/assets/eip-2537/add_G2_bls.json
+        // Source: https://eips.ethereum.org/assets/eip-2537/add_G2_bls.json
         var g = G2Affine.Generator.ToProjective();
         var result = G2Projective.Add(g, g).ToAffine();
         var expected = ParseG2FromEipOutput(
@@ -107,8 +120,7 @@ public sealed class G2Tests
     [Fact]
     public void ExternalVector_Eip2537_G2Mul_RandomScalar_ShouldMatch()
     {
-        // Source:
-        // https://eips.ethereum.org/assets/eip-2537/mul_G2_bls.json
+        // Source: https://eips.ethereum.org/assets/eip-2537/mul_G2_bls.json
         var g = G2Affine.Generator.ToProjective();
         var scalar = BigInteger.Parse("263dbd792f5b1be47ed85f8938c0f29586af0d3ac7b977f21c278fe1462040e3", System.Globalization.NumberStyles.AllowHexSpecifier);
         var result = G2Projective.ScalarMultiply(g, Scalar.FromBigInteger(scalar)).ToAffine();
@@ -128,6 +140,10 @@ public sealed class G2Tests
         var result = G2Projective.ScalarMultiply(g, Scalar.FromBigInteger(GroupOrderR)).ToAffine();
         Assert.True(result.IsInfinity);
     }
+
+    #endregion
+
+    #region Helpers
 
     private static bool AffineEqual(G2Affine a, G2Affine b)
     {
@@ -185,4 +201,6 @@ public sealed class G2Tests
         var y1 = Fp.FromBytesBigEndian(Convert.FromHexString(hex.Substring(416, 96)));
         return new G2Affine(new Fp2(x0, x1), new Fp2(y0, y1));
     }
+
+    #endregion
 }

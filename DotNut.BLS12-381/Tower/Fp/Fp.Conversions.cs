@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Diagnostics.CodeAnalysis;
 
 namespace DotNut.BLS12_381.Tower;
 
@@ -25,7 +26,7 @@ public readonly partial struct Fp
         return FromCanonical(canonical);
     }
 
-    public static bool TryFromBytesBigEndian(ReadOnlySpan<byte> bytes, out Fp value)
+    public static bool TryFromBytesBigEndian(ReadOnlySpan<byte> bytes, [MaybeNullWhen(false)] out Fp value)
     {
         value = Zero;
         if (bytes.Length != 48)
@@ -84,7 +85,7 @@ public readonly partial struct Fp
         return FromCanonical(canonical);
     }
 
-    public static bool TryFromBytesLittleEndian(ReadOnlySpan<byte> bytes, out Fp value)
+    public static bool TryFromBytesLittleEndian(ReadOnlySpan<byte> bytes, [MaybeNullWhen(false)] out Fp value)
     {
         value = Zero;
         if (bytes.Length != 48)

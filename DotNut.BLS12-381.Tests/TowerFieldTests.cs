@@ -1,14 +1,14 @@
 using DotNut.BLS12_381.Tower;
-using Xunit;
 
 namespace DotNut.BLS12_381.Tests;
 
 public sealed class TowerFieldTests
 {
     // Tower parameters source:
-    // EIP-2537 (BLS12-381 extension tower):
-    // https://eips.ethereum.org/EIPS/eip-2537
+    // EIP-2537 (BLS12-381 extension tower): https://eips.ethereum.org/EIPS/eip-2537
     // Fp2: u^2 = -1, Fp6: v^3 = u + 1, Fp12: w^2 = v
+
+    #region Fp2
 
     [Fact]
     public void Fp2_Invert_ShouldSatisfy_a_times_inv_a_is_one()
@@ -58,6 +58,10 @@ public sealed class TowerFieldTests
             Assert.Equal(-cmp, Fp2.Compare(b, a));
         }
     }
+
+    #endregion
+
+    #region Fp6
 
     [Fact]
     public void Fp6_Invert_ShouldSatisfy_a_times_inv_a_is_one()
@@ -118,6 +122,10 @@ public sealed class TowerFieldTests
             Assert.True(Fp6.Equal(a, Fp6.FrobeniusMap(a, 6)));
         }
     }
+
+    #endregion
+
+    #region Fp12
 
     [Fact]
     public void Fp12_Invert_ShouldSatisfy_a_times_inv_a_is_one()
@@ -188,8 +196,7 @@ public sealed class TowerFieldTests
     public void Fp12_FinalExponentiation_ShouldMatch_GenericExponent_Reference()
     {
         // Cross-check against direct definition: f^((p^12 - 1)/r)
-        // Source for decomposition/definition:
-        // https://github.com/zkcrypto/bls12_381/blob/main/src/pairings.rs
+        // Source: https://github.com/zkcrypto/bls12_381/blob/main/src/pairings.rs
         var p = System.Numerics.BigInteger.Parse(
             "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab",
             System.Globalization.NumberStyles.AllowHexSpecifier
@@ -211,8 +218,7 @@ public sealed class TowerFieldTests
     public void Fp12_FinalExponentiation_Result_ShouldLieIn_R_Order_Subgroup()
     {
         // GT subgroup condition: z^r = 1 after final exponentiation.
-        // r source (BLS12-381 scalar field modulus):
-        // https://www.rfc-editor.org/rfc/rfc9380.html#appendix-J.4
+        // Source: https://www.rfc-editor.org/rfc/rfc9380.html#appendix-J.4
         var r = System.Numerics.BigInteger.Parse(
             "73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
             System.Globalization.NumberStyles.AllowHexSpecifier
@@ -226,6 +232,10 @@ public sealed class TowerFieldTests
             Assert.True(Fp12.Equal(Fp12.Pow(z, r), Fp12.One));
         }
     }
+
+    #endregion
+
+    #region Helpers
 
     private static Fp RandomFp(Random random)
     {
@@ -270,4 +280,6 @@ public sealed class TowerFieldTests
             if (!Fp12.Equal(x, Fp12.Zero)) return x;
         }
     }
+
+    #endregion
 }

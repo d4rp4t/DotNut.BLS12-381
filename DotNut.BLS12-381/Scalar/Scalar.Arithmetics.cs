@@ -1,41 +1,11 @@
-using System.Numerics;
-
 namespace DotNut.BLS12_381;
 
-public readonly struct Scalar
+public readonly partial struct Scalar
 {
-    public readonly ulong L0, L1, L2, L3;
-
-    // r = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
-    internal static readonly Scalar GroupOrderR = new(
-        0xffffffff00000001UL,
-        0x53bda402fffe5bfeUL,
-        0x3339d80809a1d805UL,
-        0x73eda753299d7d48UL
-    );
-
-    // -r^{-1} mod 2^64
-    private const ulong MontgomeryInv = 0xfffffffeffffffffUL;
-
-    // R^2 mod r, where R = 2^256
-    private static readonly Scalar R2 = new(
-        0xc999e990f3f29c6dUL,
-        0x2b6cedcb87925c23UL,
-        0x05d314967254398fUL,
-        0x0748d9d99f59ff11UL
-    );
-
-    public Scalar(ulong l0, ulong l1, ulong l2, ulong l3)
-    {
-        L0 = l0;
-        L1 = l1;
-        L2 = l2;
-        L3 = l3;
-    }
-
     public ulong GetBit(int i)
     {
-        ulong limb = (i >> 6) switch { 0 => L0, 1 => L1, 2 => L2, _ => L3 };
+        var c = ToCanonical(this);
+        ulong limb = (i >> 6) switch { 0 => c.L0, 1 => c.L1, 2 => c.L2, _ => c.L3 };
         return (limb >> (i & 63)) & 1UL;
     }
 
@@ -54,35 +24,81 @@ public readonly struct Scalar
         return Select(borrow, rPlusP, r);
     }
 
-    // Mul(a, b) for canonical a, b:
-    // convert b to Montgomery form (b*R mod r), then MontReduce(a * b_m) = a*b mod r
-    public static Scalar Mul(Scalar a, Scalar b)
+    public static Scalar Mul(Scalar a, Scalar b) => MontgomeryReduce(MultiplyWide(a, b));
+
+    public static Scalar Square(Scalar a) => MontgomeryReduce(SquareWide(a));
+
+    public static Scalar Negate(Scalar a)
     {
-        var bm = MontgomeryReduce(MultiplyWide(b, R2));
-        return MontgomeryReduce(MultiplyWide(a, bm));
+        Scalar neg = SubUnchecked(GroupOrderR, a, out _);
+        return Select(IsZeroMask(a), Zero, neg);
     }
 
-    // not CT-safe, use ONLY for non-secret data (tests or basically anything before entering CT code).
-    public static Scalar FromBigInteger(BigInteger k)
+    public static Scalar Invert(Scalar a)
     {
-        var bytes = new byte[32];
-        k.TryWriteBytes(bytes, out _, isUnsigned: true, isBigEndian: false);
-        return new Scalar(
-            ReadUInt64LE(bytes, 0),
-            ReadUInt64LE(bytes, 8),
-            ReadUInt64LE(bytes, 16),
-            ReadUInt64LE(bytes, 24)
-        );
+        if (IsZero(a))
+            throw new DivideByZeroException("Cannot invert zero in scalar field.");
+
+        // a^(r-2) mod r, r-2 in little-endian limbs
+        ulong[] rMinus2 =
+        [
+            0xfffffffeffffffffUL,
+            0x53bda402fffe5bfeUL,
+            0x3339d80809a1d805UL,
+            0x73eda753299d7d48UL,
+        ];
+
+        Scalar result = One;
+        for (int limb = 3; limb >= 0; limb--)
+        {
+            ulong e = rMinus2[limb];
+            for (int bit = 63; bit >= 0; bit--)
+            {
+                result = Square(result);
+                Scalar t = Mul(result, a);
+                result = Select((e >> bit) & 1UL, t, result);
+            }
+        }
+        return result;
     }
 
-    public static implicit operator BigInteger(Scalar scalar)
+    internal static Scalar FromCanonical(Scalar a) => MontgomeryReduce(MultiplyWide(a, R2));
+
+    internal static Scalar ToCanonical(Scalar a) =>
+        MontgomeryReduce([a.L0, a.L1, a.L2, a.L3, 0UL, 0UL, 0UL, 0UL]);
+
+    private static ulong[] SquareWide(Scalar a)
     {
-        var bytes = new byte[33]; // extra zero byte = positive sign
-        WriteUInt64LE(bytes, 0, scalar.L0);
-        WriteUInt64LE(bytes, 8, scalar.L1);
-        WriteUInt64LE(bytes, 16, scalar.L2);
-        WriteUInt64LE(bytes, 24, scalar.L3);
-        return new BigInteger(bytes);
+        ulong carry;
+
+        // phase 1: upper-triangle cross products (i < j), no 2x factor yet
+        ulong r1 = CommonMath.Mac(a.L0, a.L1, 0, 0, out carry);
+        ulong r2 = CommonMath.Mac(a.L0, a.L2, 0, carry, out carry);
+        ulong r3 = CommonMath.Mac(a.L0, a.L3, 0, carry, out ulong r4);
+        r3 = CommonMath.Mac(a.L1, a.L2, r3, 0, out carry);
+        r4 = CommonMath.Mac(a.L1, a.L3, r4, carry, out ulong r5);
+        r5 = CommonMath.Mac(a.L2, a.L3, r5, 0, out ulong r6);
+
+        // phase 2: double cross terms (shift left 1 bit)
+        ulong r7 = r6 >> 63;
+        r6 = (r6 << 1) | (r5 >> 63);
+        r5 = (r5 << 1) | (r4 >> 63);
+        r4 = (r4 << 1) | (r3 >> 63);
+        r3 = (r3 << 1) | (r2 >> 63);
+        r2 = (r2 << 1) | (r1 >> 63);
+        r1 <<= 1;
+
+        // phase 3: add diagonal terms a[i]^2
+        ulong r0 = CommonMath.Mac(a.L0, a.L0, 0, 0, out carry);
+        r1 = CommonMath.AddCarry(r1, carry, 0, out carry);
+        r2 = CommonMath.Mac(a.L1, a.L1, r2, carry, out carry);
+        r3 = CommonMath.AddCarry(r3, carry, 0, out carry);
+        r4 = CommonMath.Mac(a.L2, a.L2, r4, carry, out carry);
+        r5 = CommonMath.AddCarry(r5, carry, 0, out carry);
+        r6 = CommonMath.Mac(a.L3, a.L3, r6, carry, out carry);
+        r7 = CommonMath.AddCarry(r7, carry, 0, out _);
+
+        return [r0, r1, r2, r3, r4, r5, r6, r7];
     }
 
     private static ulong[] MultiplyWide(Scalar a, Scalar b)
@@ -158,25 +174,9 @@ public readonly struct Scalar
         return new Scalar(l0, l1, l2, l3);
     }
 
-    private static ulong ReadUInt64LE(byte[] buf, int offset) =>
-        (ulong)buf[offset]             |
-        ((ulong)buf[offset + 1] << 8)  |
-        ((ulong)buf[offset + 2] << 16) |
-        ((ulong)buf[offset + 3] << 24) |
-        ((ulong)buf[offset + 4] << 32) |
-        ((ulong)buf[offset + 5] << 40) |
-        ((ulong)buf[offset + 6] << 48) |
-        ((ulong)buf[offset + 7] << 56);
-
-    private static void WriteUInt64LE(byte[] buf, int offset, ulong val)
+    private static ulong IsZeroMask(Scalar a)
     {
-        buf[offset + 0] = (byte)val;
-        buf[offset + 1] = (byte)(val >> 8);
-        buf[offset + 2] = (byte)(val >> 16);
-        buf[offset + 3] = (byte)(val >> 24);
-        buf[offset + 4] = (byte)(val >> 32);
-        buf[offset + 5] = (byte)(val >> 40);
-        buf[offset + 6] = (byte)(val >> 48);
-        buf[offset + 7] = (byte)(val >> 56);
+        ulong x = a.L0 | a.L1 | a.L2 | a.L3;
+        return ((x | (0UL - x)) >> 63) ^ 1UL;
     }
 }

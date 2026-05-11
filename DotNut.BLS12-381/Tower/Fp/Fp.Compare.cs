@@ -15,12 +15,12 @@ public readonly partial struct Fp
 
         ulong gt = 0, lt = 0;
 
-        CmpLimb(ca.L5, cb.L5, ref gt, ref lt);
-        CmpLimb(ca.L4, cb.L4, ref gt, ref lt);
-        CmpLimb(ca.L3, cb.L3, ref gt, ref lt);
-        CmpLimb(ca.L2, cb.L2, ref gt, ref lt);
-        CmpLimb(ca.L1, cb.L1, ref gt, ref lt);
-        CmpLimb(ca.L0, cb.L0, ref gt, ref lt);
+        CommonMath.CmpLimb(ca.L5, cb.L5, ref gt, ref lt);
+        CommonMath.CmpLimb(ca.L4, cb.L4, ref gt, ref lt);
+        CommonMath.CmpLimb(ca.L3, cb.L3, ref gt, ref lt);
+        CommonMath.CmpLimb(ca.L2, cb.L2, ref gt, ref lt);
+        CommonMath.CmpLimb(ca.L1, cb.L1, ref gt, ref lt);
+        CommonMath.CmpLimb(ca.L0, cb.L0, ref gt, ref lt);
 
         return (int)gt - (int)lt;
     }
@@ -49,15 +49,5 @@ public readonly partial struct Fp
     public override int GetHashCode()
     {
         return HashCode.Combine(L0, L1, L2, L3, L4, L5);
-    }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    static void CmpLimb(ulong a, ulong b, ref ulong gt, ref ulong lt)
-    {
-        ulong a_gt_b = (b - a) >> 63;
-        ulong b_gt_a = (a - b) >> 63;
-        ulong undecided = 1 - (gt | lt);
-        gt |= undecided & a_gt_b;
-        lt |= undecided & b_gt_a;
     }
 }

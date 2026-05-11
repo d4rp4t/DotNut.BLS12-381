@@ -1,7 +1,6 @@
 using System.Numerics;
 using System.Reflection;
 using DotNut.BLS12_381.Tower;
-using Xunit;
 
 namespace DotNut.BLS12_381.Tests;
 

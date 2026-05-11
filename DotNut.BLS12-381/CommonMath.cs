@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace DotNut.BLS12_381;
 
 internal static class CommonMath
@@ -26,5 +28,15 @@ internal static class CommonMath
     public static ulong SelectU64(ulong mask, ulong whenMaskAllOnes, ulong whenMaskZero)
     {
         return (whenMaskAllOnes & mask) | (whenMaskZero & ~mask);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void CmpLimb(ulong a, ulong b, ref ulong gt, ref ulong lt)
+    {
+        ulong a_gt_b = (b - a) >> 63;
+        ulong b_gt_a = (a - b) >> 63;
+        ulong undecided = 1 - (gt | lt);
+        gt |= undecided & a_gt_b;
+        lt |= undecided & b_gt_a;
     }
 }
