@@ -1,152 +1,187 @@
 using DotNut.BLS12_381.Curve.G1;
 using DotNut.BLS12_381.Curve.G2;
 using DotNut.BLS12_381.Tower;
-using System.Globalization;
-using System.Numerics;
 
 namespace DotNut.BLS12_381.Pairing;
 
 public static class Bls12Pairing
 {
-    // Leading "0" required: AllowHexSpecifier treats high bit as sign (two's complement).
-    private static readonly BigInteger AteLoopSize = BigInteger.Parse("0d201000000010000", NumberStyles.AllowHexSpecifier);
-    private static readonly Fp2 Fp2Div2 = DivideBy2(Fp2.One);
+    // BLS_X = 0xd201000000010000 (negative parameter for BLS12-381)
+    // BLS_X >> 1 — used as the binary Miller loop scalar
+    private const ulong BlsXHalf = 0x6900800000008000UL;
 
-    public static Fp12 Pair(G1Affine p, G2Affine q)
-    {
-        var f = MillerLoop(p, q);
-        return Fp12.FinalExponentiation(f);
-    }
+    public static Gt Pair(G1Affine p, G2Affine q) => MillerLoop(p, q).FinalExponentiation();
 
-    public static Fp12 MillerLoop(G1Affine p, G2Affine q)
+    public static MillerLoopResult MillerLoop(G1Affine p, G2Affine q)
     {
-        if (p.IsInfinity || q.IsInfinity)
-            return Fp12.One;
+        if (p.IsInfinity || q.IsInfinity) return MillerLoopResult.Default;
         if (!p.IsInSubgroup() || !q.IsInSubgroup())
             throw new ArgumentException("Input point is not in the correct subgroup.");
 
-        var ell = CalcPairingPrecomputes(q);
-        var f12 = Fp12.One;
+        var rx = q.X; var ry = q.Y; var rz = Fp2.One;
+        var f = Fp12.One;
+        var foundOne = false;
 
-        for (var i = 0; i < ell.Count; i++)
+        for (var b = 63; b >= 0; b--)
         {
-            f12 = Fp12.Square(f12);
-            var steps = ell[i];
-            for (var j = 0; j < steps.Count; j++)
+            var bit = ((BlsXHalf >> b) & 1) == 1;
+            if (!foundOne) { foundOne = bit; continue; }
+
+            f = Ell(f, DoublingStep(ref rx, ref ry, ref rz), p.X, p.Y);
+            if (bit)
+                f = Ell(f, AdditionStep(ref rx, ref ry, ref rz, q.X, q.Y), p.X, p.Y);
+            f = Fp12.Square(f);
+        }
+
+        f = Ell(f, DoublingStep(ref rx, ref ry, ref rz), p.X, p.Y);
+
+        // BLS_X is negative
+        return new MillerLoopResult(Fp12.Conjugate(f));
+    }
+
+    public static MillerLoopResult MultiMillerLoop(IEnumerable<(G1Affine P, G2Prepared Q)> terms)
+    {
+        var termList = terms.ToList();
+        var f = Fp12.One;
+        var coeffIdx = 0;
+        var foundOne = false;
+
+        for (var b = 63; b >= 0; b--)
+        {
+            var bit = ((BlsXHalf >> b) & 1) == 1;
+            if (!foundOne) { foundOne = bit; continue; }
+
+            foreach (var (p, qPrep) in termList)
+                if (!p.IsInfinity && !qPrep.IsInfinity)
+                    f = Ell(f, qPrep.Coeffs[coeffIdx], p.X, p.Y);
+            coeffIdx++;
+
+            if (bit)
             {
-                var (c0, c1, c2) = steps[j];
-                f12 = LineFunction(c0, c1, c2, f12, p.X, p.Y);
+                foreach (var (p, qPrep) in termList)
+                    if (!p.IsInfinity && !qPrep.IsInfinity)
+                        f = Ell(f, qPrep.Coeffs[coeffIdx], p.X, p.Y);
+                coeffIdx++;
             }
+
+            f = Fp12.Square(f);
         }
 
-        // x is negative for BLS12-381.
-        return Fp12.Conjugate(f12);
+        foreach (var (p, qPrep) in termList)
+            if (!p.IsInfinity && !qPrep.IsInfinity)
+                f = Ell(f, qPrep.Coeffs[coeffIdx], p.X, p.Y);
+
+        return new MillerLoopResult(Fp12.Conjugate(f));
     }
 
-    private static List<List<(Fp2 c0, Fp2 c1, Fp2 c2)>> CalcPairingPrecomputes(G2Affine q)
+    internal static G2Prepared BuildG2Prepared(G2Affine q)
     {
-        var qx = q.X;
-        var qy = q.Y;
-        var negQy = Fp2.Negate(qy);
+        var isInfinity = q.IsInfinity;
+        // Use generator as stand-in for infinity to keep valid arithmetic
+        var qq = isInfinity ? G2Affine.Generator : q;
 
-        var rx = qx;
-        var ry = qy;
-        var rz = Fp2.One;
+        var rx = qq.X; var ry = qq.Y; var rz = Fp2.One;
+        var coeffs = new (Fp2 c0, Fp2 c1, Fp2 c2)[68];
+        var idx = 0;
+        var foundOne = false;
 
-        var ell = new List<List<(Fp2, Fp2, Fp2)>>();
-        foreach (var bit in NafDecomposition(AteLoopSize))
+        for (var b = 63; b >= 0; b--)
         {
-            var cur = new List<(Fp2, Fp2, Fp2)>(2);
-            (rx, ry, rz) = PointDouble(cur, rx, ry, rz);
-            if (bit != 0)
-                (rx, ry, rz) = PointAdd(cur, rx, ry, rz, qx, bit == -1 ? negQy : qy);
-            ell.Add(cur);
+            var bit = ((BlsXHalf >> b) & 1) == 1;
+            if (!foundOne) { foundOne = bit; continue; }
+
+            coeffs[idx++] = DoublingStep(ref rx, ref ry, ref rz);
+            if (bit)
+                coeffs[idx++] = AdditionStep(ref rx, ref ry, ref rz, qq.X, qq.Y);
         }
 
-        return ell;
+        coeffs[idx++] = DoublingStep(ref rx, ref ry, ref rz);
+        System.Diagnostics.Debug.Assert(idx == 68);
+
+        return new G2Prepared(isInfinity, coeffs);
     }
 
-    private static (Fp2 rx, Fp2 ry, Fp2 rz) PointDouble(List<(Fp2 c0, Fp2 c1, Fp2 c2)> ell, Fp2 rx, Fp2 ry, Fp2 rz)
+    // Algorithm 26, https://eprint.iacr.org/2010/354.pdf
+    private static (Fp2 c0, Fp2 c1, Fp2 c2) DoublingStep(ref Fp2 rx, ref Fp2 ry, ref Fp2 rz)
     {
-        var t0 = Fp2.Square(ry);
-        var t1 = Fp2.Square(rz);
-        var t2 = MulByB(MulBy3(t1));
-        var t3 = MulBy3(t2);
-        var t4 = Fp2.Subtract(Fp2.Subtract(Fp2.Square(Fp2.Add(ry, rz)), t1), t0);
-        var c0 = Fp2.Subtract(t2, t0);
-        var c1 = MulBy3(Fp2.Square(rx));
-        var c2 = Fp2.Negate(t4);
-        ell.Add((c0, c1, c2));
+        var tmp0 = Fp2.Square(rx);
+        var tmp1 = Fp2.Square(ry);
+        var tmp2 = Fp2.Square(tmp1);
+        var tmp3 = Fp2.Subtract(Fp2.Subtract(Fp2.Square(Fp2.Add(tmp1, rx)), tmp0), tmp2);
+        tmp3 = Fp2.Add(tmp3, tmp3);
+        var tmp4 = Fp2.Add(Fp2.Add(tmp0, tmp0), tmp0);
+        var tmp6 = Fp2.Add(rx, tmp4);
+        var tmp5 = Fp2.Square(tmp4);
+        var zSq = Fp2.Square(rz);
 
-        rx = Fp2.Multiply(Fp2.Multiply(Fp2.Multiply(Fp2.Subtract(t0, t3), rx), ry), Fp2Div2);
-        ry = Fp2.Subtract(Fp2.Square(Fp2.Multiply(Fp2.Add(t0, t3), Fp2Div2)), MulBy3(Fp2.Square(t2)));
-        rz = Fp2.Multiply(t0, t4);
-        return (rx, ry, rz);
+        rx = Fp2.Subtract(Fp2.Subtract(tmp5, tmp3), tmp3);
+        rz = Fp2.Subtract(Fp2.Subtract(Fp2.Square(Fp2.Add(rz, ry)), tmp1), zSq);
+        ry = Fp2.Multiply(Fp2.Subtract(tmp3, rx), tmp4);
+        tmp2 = Fp2.Add(tmp2, tmp2);
+        tmp2 = Fp2.Add(tmp2, tmp2);
+        tmp2 = Fp2.Add(tmp2, tmp2);
+        ry = Fp2.Subtract(ry, tmp2);
+
+        var c1 = Fp2.Multiply(tmp4, zSq);
+        c1 = Fp2.Negate(Fp2.Add(c1, c1));
+
+        var c2 = Fp2.Subtract(Fp2.Subtract(Fp2.Square(tmp6), tmp0), tmp5);
+        var t1 = Fp2.Add(Fp2.Add(tmp1, tmp1), Fp2.Add(tmp1, tmp1));
+        c2 = Fp2.Subtract(c2, t1);
+
+        var c0 = Fp2.Multiply(rz, zSq);
+        c0 = Fp2.Add(c0, c0);
+
+        return (c0, c1, c2);
     }
 
-    private static (Fp2 rx, Fp2 ry, Fp2 rz) PointAdd(List<(Fp2 c0, Fp2 c1, Fp2 c2)> ell, Fp2 rx, Fp2 ry, Fp2 rz, Fp2 qx, Fp2 qy)
+    // Algorithm 27, https://eprint.iacr.org/2010/354.pdf
+    private static (Fp2 c0, Fp2 c1, Fp2 c2) AdditionStep(ref Fp2 rx, ref Fp2 ry, ref Fp2 rz, Fp2 qx, Fp2 qy)
     {
-        var t0 = Fp2.Subtract(ry, Fp2.Multiply(qy, rz));
-        var t1 = Fp2.Subtract(rx, Fp2.Multiply(qx, rz));
-        var c0 = Fp2.Subtract(Fp2.Multiply(t0, qx), Fp2.Multiply(t1, qy));
-        var c1 = Fp2.Negate(t0);
-        var c2 = t1;
-        ell.Add((c0, c1, c2));
+        var zSq = Fp2.Square(rz);
+        var ySq = Fp2.Square(qy);
+        var t0 = Fp2.Multiply(zSq, qx);
+        var t1 = Fp2.Multiply(
+            Fp2.Subtract(Fp2.Subtract(Fp2.Square(Fp2.Add(qy, rz)), ySq), zSq),
+            zSq);
+        var t2 = Fp2.Subtract(t0, rx);
+        var t3 = Fp2.Square(t2);
+        var t4 = Fp2.Add(t3, t3);
+        t4 = Fp2.Add(t4, t4);
+        var t5 = Fp2.Multiply(t4, t2);
+        var t6 = Fp2.Subtract(Fp2.Subtract(t1, ry), ry);
+        var t9 = Fp2.Multiply(t6, qx);
+        var t7 = Fp2.Multiply(t4, rx);
 
-        var t2 = Fp2.Square(t1);
-        var t3 = Fp2.Multiply(t2, t1);
-        var t4 = Fp2.Multiply(t2, rx);
-        var t5 = Fp2.Add(Fp2.Subtract(t3, MulBy2(t4)), Fp2.Multiply(Fp2.Square(t0), rz));
-        rx = Fp2.Multiply(t1, t5);
-        ry = Fp2.Subtract(Fp2.Multiply(Fp2.Subtract(t4, t5), t0), Fp2.Multiply(t3, ry));
-        rz = Fp2.Multiply(rz, t3);
-        return (rx, ry, rz);
+        rx = Fp2.Subtract(Fp2.Subtract(Fp2.Subtract(Fp2.Square(t6), t5), t7), t7);
+        rz = Fp2.Subtract(Fp2.Subtract(Fp2.Square(Fp2.Add(rz, t2)), zSq), t3);
+
+        var t10 = Fp2.Add(qy, rz);
+        var t8 = Fp2.Multiply(Fp2.Subtract(t7, rx), t6);
+        var t0b = Fp2.Multiply(ry, t5);
+        t0b = Fp2.Add(t0b, t0b);
+        ry = Fp2.Subtract(t8, t0b);
+
+        t10 = Fp2.Subtract(Fp2.Square(t10), ySq);
+        var ztSq = Fp2.Square(rz);
+        t10 = Fp2.Subtract(t10, ztSq);
+        t9 = Fp2.Subtract(Fp2.Add(t9, t9), t10);
+        var c0 = Fp2.Add(rz, rz);
+        t6 = Fp2.Negate(t6);
+        var c1 = Fp2.Add(t6, t6);
+
+        return (c0, c1, t9);
     }
 
-    private static Fp12 LineFunction(Fp2 c0, Fp2 c1, Fp2 c2, Fp12 f, Fp px, Fp py)
+    // Maps precomputed (c0,c1,c2) line coefficients + G1 point into Fp12 line-evaluation.
+    // c0 is scaled by py, c1 by px; c2 is the unscaled ell_0 term.
+    private static Fp12 Ell(Fp12 f, (Fp2 c0, Fp2 c1, Fp2 c2) coeffs, Fp px, Fp py)
     {
-        var o1 = MulByFp(c1, px);
-        var o4 = MulByFp(c2, py);
-        return Fp12.MulBy014(f, c0, o1, o4);
+        var ell4 = MulByFp(coeffs.c0, py);
+        var ell1 = MulByFp(coeffs.c1, px);
+        return Fp12.MulBy014(f, coeffs.c2, ell1, ell4);
     }
 
-    private static List<int> NafDecomposition(BigInteger a)
-    {
-        var res = new List<int>();
-        while (a > 1)
-        {
-            if (a.IsEven) res.Insert(0, 0);
-            else if ((a & 3) == 3)
-            {
-                res.Insert(0, -1);
-                a += 1;
-            }
-            else res.Insert(0, 1);
-            a >>= 1;
-        }
-        return res;
-    }
-
-    private static Fp2 MulByFp(Fp2 value, Fp scalar) => new(Fp.Multiply(value.C0, scalar), Fp.Multiply(value.C1, scalar));
-    private static Fp2 MulBy2(Fp2 value) => Fp2.Add(value, value);
-    private static Fp2 MulBy3(Fp2 value) => Fp2.Add(value, MulBy2(value));
-    private static Fp2 MulBy4(Fp2 value) => MulBy2(MulBy2(value));
-
-    private static Fp2 MulByB(Fp2 value)
-    {
-        var fourC0 = MulBy4Fp(value.C0);
-        var fourC1 = MulBy4Fp(value.C1);
-        // 4*(c0 + c1*u)*(1+u) = (4c0-4c1) + (4c0+4c1)u
-        var c0 = Fp.Subtract(fourC0, fourC1);
-        var c1 = Fp.Add(fourC0, fourC1);
-        return new Fp2(c0, c1);
-    }
-
-    private static Fp2 DivideBy2(Fp2 value)
-    {
-        var inv2 = Fp.Invert(Fp.Add(Fp.One, Fp.One));
-        return new Fp2(Fp.Multiply(value.C0, inv2), Fp.Multiply(value.C1, inv2));
-    }
-
-    private static Fp MulBy4Fp(Fp value) => Fp.Add(Fp.Add(value, value), Fp.Add(value, value));
+    private static Fp2 MulByFp(Fp2 value, Fp scalar)
+        => new(Fp.Multiply(value.C0, scalar), Fp.Multiply(value.C1, scalar));
 }

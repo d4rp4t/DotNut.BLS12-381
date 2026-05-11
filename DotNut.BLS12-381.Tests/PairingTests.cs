@@ -14,15 +14,15 @@ public sealed class PairingTests
     {
         var r1 = Bls12Pairing.MillerLoop(G1Affine.Infinity, G2Affine.Generator);
         var r2 = Bls12Pairing.MillerLoop(G1Affine.Generator, G2Affine.Infinity);
-        Assert.True(Fp12.Equal(r1, Fp12.One));
-        Assert.True(Fp12.Equal(r2, Fp12.One));
+        Assert.True(Fp12.Equal(r1.Value, Fp12.One));
+        Assert.True(Fp12.Equal(r2.Value, Fp12.One));
     }
 
     [Fact]
     public void MillerLoop_WithRegularPoints_ShouldReturnNonZero()
     {
         var f = Bls12Pairing.MillerLoop(G1Affine.Generator, G2Affine.Generator);
-        Assert.False(Fp12.Equal(f, Fp12.Zero));
+        Assert.False(Fp12.Equal(f.Value, Fp12.Zero));
     }
 
     #endregion
@@ -30,19 +30,26 @@ public sealed class PairingTests
     #region Pairing
 
     [Fact]
-    public void Pair_WithInfinityInput_ShouldReturnOne()
+    public void Pair_WithInfinityInput_ShouldReturnIdentity()
     {
         var r1 = Bls12Pairing.Pair(G1Affine.Infinity, G2Affine.Generator);
         var r2 = Bls12Pairing.Pair(G1Affine.Generator, G2Affine.Infinity);
-        Assert.True(Fp12.Equal(r1, Fp12.One));
-        Assert.True(Fp12.Equal(r2, Fp12.One));
+        Assert.True(Gt.Equal(r1, Gt.Identity));
+        Assert.True(Gt.Equal(r2, Gt.Identity));
     }
 
     [Fact]
-    public void Pair_Generator_ShouldNotBeOne()
+    public void Pair_Generator_ShouldNotBeIdentity()
     {
         var e = Bls12Pairing.Pair(G1Affine.Generator, G2Affine.Generator);
-        Assert.False(Fp12.Equal(e, Fp12.One));
+        Assert.False(Gt.Equal(e, Gt.Identity));
+    }
+
+    [Fact]
+    public void Pair_Generator_ShouldMatchGtGenerator()
+    {
+        var e = Bls12Pairing.Pair(G1Affine.Generator, G2Affine.Generator);
+        Assert.True(Gt.Equal(e, Gt.Generator));
     }
 
     [Fact]
@@ -56,21 +63,67 @@ public sealed class PairingTests
 
         var e1 = Bls12Pairing.Pair(p, q);
         var e = Bls12Pairing.Pair(G1Affine.Generator, G2Affine.Generator);
-        var ab = new System.Numerics.BigInteger(35);
-        var e2 = Fp12.Pow(e, ab);
+        var e2 = Gt.Multiply(e, Scalar.FromBigInteger(new System.Numerics.BigInteger(35)));
 
-        Assert.True(Fp12.Equal(e1, e2));
+        Assert.True(Gt.Equal(e1, e2));
     }
 
     [Fact]
     public void Pairing_Unitary_NegateG1()
     {
-        // e(-P, Q) = e(P, Q)^(-1) = conjugate of e(P, Q) in G_T (unitary element)
+        // e(-P, Q) == e(P, Q)^(-1) == Gt.Negate(e(P, Q))
         var gen = G1Affine.Generator;
         var negGen = new G1Affine(gen.X, Fp.Negate(gen.Y), gen.IsInfinity);
         var e1 = Bls12Pairing.Pair(negGen, G2Affine.Generator);
-        var e2 = Fp12.Conjugate(Bls12Pairing.Pair(gen, G2Affine.Generator));
-        Assert.True(Fp12.Equal(e1, e2));
+        var e2 = Gt.Negate(Bls12Pairing.Pair(gen, G2Affine.Generator));
+        Assert.True(Gt.Equal(e1, e2));
+    }
+
+    #endregion
+
+    #region MultiMillerLoop
+
+    [Fact]
+    public void MillerLoopResult_Default_ShouldReturnGtIdentity()
+    {
+        var result = MillerLoopResult.Default.FinalExponentiation();
+        Assert.True(Gt.Equal(result, Gt.Identity));
+    }
+
+    [Fact]
+    public void MultiMillerLoop_SingleTerm_ShouldMatchPair()
+    {
+        var p = G1Affine.Generator;
+        var q = G2Prepared.From(G2Affine.Generator);
+        var result = Bls12Pairing.MultiMillerLoop([(p, q)]).FinalExponentiation();
+        var expected = Bls12Pairing.Pair(G1Affine.Generator, G2Affine.Generator);
+        Assert.True(Gt.Equal(result, expected));
+    }
+
+    [Fact]
+    public void G2Prepared_FromInfinity_ShouldReturnIdentity()
+    {
+        var p = G1Affine.Generator;
+        var q = G2Prepared.From(G2Affine.Infinity);
+        var result = Bls12Pairing.MultiMillerLoop([(p, q)]).FinalExponentiation();
+        Assert.True(Gt.Equal(result, Gt.Identity));
+    }
+
+    [Fact]
+    public void MultiMillerLoop_TwoTerms_ShouldEqualProductOfPairings()
+    {
+        var a = new System.Numerics.BigInteger(3);
+        var b = new System.Numerics.BigInteger(7);
+        var p1 = G1Projective.ScalarMultiply(G1Affine.Generator.ToProjective(), Scalar.FromBigInteger(a)).ToAffine();
+        var p2 = G1Projective.ScalarMultiply(G1Affine.Generator.ToProjective(), Scalar.FromBigInteger(b)).ToAffine();
+        var q1 = G2Prepared.From(G2Affine.Generator);
+        var q2 = G2Prepared.From(G2Affine.Generator);
+
+        var multi = Bls12Pairing.MultiMillerLoop([(p1, q1), (p2, q2)]).FinalExponentiation();
+        var single = Gt.Add(
+            Bls12Pairing.Pair(p1, G2Affine.Generator),
+            Bls12Pairing.Pair(p2, G2Affine.Generator));
+        Assert.True(Gt.Equal(multi, single));
     }
 
     #endregion
