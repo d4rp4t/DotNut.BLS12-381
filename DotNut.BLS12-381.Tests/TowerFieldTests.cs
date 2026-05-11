@@ -153,11 +153,15 @@ public sealed class TowerFieldTests
     [Fact]
     public void Fp12_CyclotomicSquare_ShouldMatch_Square()
     {
+        // CyclotomicSquare is equivalent to Square only for cyclotomic subgroup elements.
+        // Generate them via the easy part: f^((p^6-1)(p^2+1)).
         var random = new Random(303);
         for (var i = 0; i < 60; i++)
         {
-            var a = RandomFp12(random);
-            Assert.True(Fp12.Equal(Fp12.CyclotomicSquare(a), Fp12.Square(a)));
+            var a = RandomFp12NonZero(random);
+            var f = Fp12.Multiply(Fp12.Conjugate(a), Fp12.Invert(a));
+            f = Fp12.Multiply(Fp12.FrobeniusMap(f, 2), f);
+            Assert.True(Fp12.Equal(Fp12.CyclotomicSquare(f), Fp12.Square(f)));
         }
     }
 
@@ -193,10 +197,50 @@ public sealed class TowerFieldTests
     }
 
     [Fact]
-    public void Fp12_FinalExponentiation_ShouldMatch_GenericExponent_Reference()
+    public void Fp12_CyclotomicExp_ShouldMatchPow_ForCyclotomicElements()
     {
-        // Cross-check against direct definition: f^((p^12 - 1)/r)
-        // Source: https://github.com/zkcrypto/bls12_381/blob/main/src/pairings.rs
+        // Leading "0" required: AllowHexSpecifier treats high bit as sign bit (two's complement).
+        var blsX = System.Numerics.BigInteger.Parse(
+            "0d201000000010000",
+            System.Globalization.NumberStyles.AllowHexSpecifier
+        );
+        var random = new Random(602);
+        for (var i = 0; i < 5; i++)
+        {
+            var a = RandomFp12NonZero(random);
+            var f = Fp12.Multiply(Fp12.Conjugate(a), Fp12.Invert(a));
+            f = Fp12.Multiply(Fp12.FrobeniusMap(f, 2), f);
+            var expected = Fp12.Pow(f, blsX);
+            var actual = Fp12.CyclotomicExp(f, blsX);
+            Assert.True(Fp12.Equal(expected, actual));
+        }
+    }
+
+    [Fact]
+    public void Fp12_CyclotomicExpBlsX_ShouldMatch_PowAndConjugate()
+    {
+        var blsXPositive = System.Numerics.BigInteger.Parse(
+            "0d201000000010000",
+            System.Globalization.NumberStyles.AllowHexSpecifier
+        );
+        var random = new Random(701);
+        for (var i = 0; i < 3; i++)
+        {
+            var a = RandomFp12NonZero(random);
+            var f = Fp12.Multiply(Fp12.Conjugate(a), Fp12.Invert(a));
+            f = Fp12.Multiply(Fp12.FrobeniusMap(f, 2), f);
+            var expected = Fp12.Conjugate(Fp12.Pow(f, blsXPositive));
+            var actual = Fp12.CyclotomicExpBlsX(f);
+            Assert.True(Fp12.Equal(expected, actual));
+        }
+    }
+
+    [Fact]
+    public void Fp12_Beuchat_PolynomialForm_ShouldEqual_HardExp()
+    {
+        // Verify the Beuchat decomposition formula symbolically.
+        // result = g^[λ_0 + λ_1*p + λ_2*p^2 + λ_3*p^3]
+        // where λ_i are polynomials in u, the BLS parameter.
         var p = System.Numerics.BigInteger.Parse(
             "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab",
             System.Globalization.NumberStyles.AllowHexSpecifier
@@ -205,7 +249,103 @@ public sealed class TowerFieldTests
             "73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
             System.Globalization.NumberStyles.AllowHexSpecifier
         );
-        var exp = (System.Numerics.BigInteger.Pow(p, 12) - 1) / r;
+        var hardExp = (System.Numerics.BigInteger.Pow(p, 4) - System.Numerics.BigInteger.Pow(p, 2) + 1) / r;
+
+        // u = -0xd201000000010000 (negative BLS parameter)
+        var blsXPos = System.Numerics.BigInteger.Parse(
+            "0d201000000010000",
+            System.Globalization.NumberStyles.AllowHexSpecifier
+        );
+        var u = -blsXPos;
+
+        var u2 = u * u;
+        var u3 = u2 * u;
+        var u4 = u3 * u;
+        var u5 = u4 * u;
+
+        var lambda0 = u5 - 2 * u4 + 2 * u2 - u + 3;
+        var lambda1 = u4 - 2 * u3 + 2 * u - 1;
+        var lambda2 = u3 - 2 * u2 + u;
+        var lambda3 = u2 - 2 * u + 1;
+
+        var pBig = System.Numerics.BigInteger.Pow(p, 1);
+        var p2 = System.Numerics.BigInteger.Pow(p, 2);
+        var p3 = System.Numerics.BigInteger.Pow(p, 3);
+
+        var polyExp = lambda0 + lambda1 * pBig + lambda2 * p2 + lambda3 * p3;
+
+        // The Beuchat decomposition for BLS12 equals 3·(p^4-p^2+1)/r exactly.
+        // The factor 3 absorbs the 1/3 in p(u) = (u-1)^2(u^4-u^2+1)/3 + u so the
+        // coefficients λ_i(u) stay integer-valued.
+        Assert.Equal(3 * hardExp, polyExp);
+    }
+
+    [Fact]
+    public void Fp12_FrobeniusMap_Single_ShouldMatch_PowByP()
+    {
+        var p = System.Numerics.BigInteger.Parse(
+            "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab",
+            System.Globalization.NumberStyles.AllowHexSpecifier
+        );
+        var random = new Random(702);
+        for (var i = 0; i < 3; i++)
+        {
+            var a = RandomFp12NonZero(random);
+            Assert.True(Fp12.Equal(Fp12.FrobeniusMap(a, 1), Fp12.Pow(a, p)));
+            Assert.True(Fp12.Equal(Fp12.FrobeniusMap(a, 3), Fp12.Pow(a, System.Numerics.BigInteger.Pow(p, 3))));
+        }
+    }
+
+    [Fact]
+    public void Fp12_HardPart_Beuchat_ShouldMatchPow_Seed404()
+    {
+        var p_bi = System.Numerics.BigInteger.Parse(
+            "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab",
+            System.Globalization.NumberStyles.AllowHexSpecifier
+        );
+        var r_bi = System.Numerics.BigInteger.Parse(
+            "73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
+            System.Globalization.NumberStyles.AllowHexSpecifier
+        );
+        var hardExp = 3 * (System.Numerics.BigInteger.Pow(p_bi, 4) - System.Numerics.BigInteger.Pow(p_bi, 2) + 1) / r_bi;
+
+        var random = new Random(404);
+        var a = RandomFp12NonZero(random);
+
+        var easy = Fp12.Multiply(Fp12.Conjugate(a), Fp12.Invert(a));
+        easy = Fp12.Multiply(Fp12.FrobeniusMap(easy, 2), easy);
+
+        var expected = Fp12.Pow(easy, hardExp);
+        var actual = Fp12.FinalExponentiation(a);
+
+        Assert.True(Fp12.Equal(expected, actual));
+    }
+
+    [Fact]
+    public void Fp12_FrobeniusMap_ShouldBeCompositional()
+    {
+        var random = new Random(601);
+        for (var i = 0; i < 20; i++)
+        {
+            var a = RandomFp12(random);
+            Assert.True(Fp12.Equal(Fp12.FrobeniusMap(a, 2), Fp12.FrobeniusMap(Fp12.FrobeniusMap(a, 1), 1)));
+            Assert.True(Fp12.Equal(Fp12.FrobeniusMap(a, 3), Fp12.FrobeniusMap(Fp12.FrobeniusMap(a, 2), 1)));
+            Assert.True(Fp12.Equal(Fp12.FrobeniusMap(a, 6), Fp12.FrobeniusMap(Fp12.FrobeniusMap(a, 3), 3)));
+        }
+    }
+
+    [Fact]
+    public void Fp12_FinalExponentiation_ShouldMatch_GenericExponent_Reference()
+    {
+        var p = System.Numerics.BigInteger.Parse(
+            "1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab",
+            System.Globalization.NumberStyles.AllowHexSpecifier
+        );
+        var r = System.Numerics.BigInteger.Parse(
+            "73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
+            System.Globalization.NumberStyles.AllowHexSpecifier
+        );
+        var exp = 3 * (System.Numerics.BigInteger.Pow(p, 12) - 1) / r;
 
         var random = new Random(404);
         var a = RandomFp12NonZero(random);

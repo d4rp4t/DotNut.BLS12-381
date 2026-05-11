@@ -39,6 +39,13 @@ public sealed class PairingTests
     }
 
     [Fact]
+    public void Pair_Generator_ShouldNotBeOne()
+    {
+        var e = Bls12Pairing.Pair(G1Affine.Generator, G2Affine.Generator);
+        Assert.False(Fp12.Equal(e, Fp12.One));
+    }
+
+    [Fact]
     public void Pairing_ShouldBeBilinear_ForSmallScalars()
     {
         var a = new System.Numerics.BigInteger(5);
@@ -52,6 +59,17 @@ public sealed class PairingTests
         var ab = new System.Numerics.BigInteger(35);
         var e2 = Fp12.Pow(e, ab);
 
+        Assert.True(Fp12.Equal(e1, e2));
+    }
+
+    [Fact]
+    public void Pairing_Unitary_NegateG1()
+    {
+        // e(-P, Q) = e(P, Q)^(-1) = conjugate of e(P, Q) in G_T (unitary element)
+        var gen = G1Affine.Generator;
+        var negGen = new G1Affine(gen.X, Fp.Negate(gen.Y), gen.IsInfinity);
+        var e1 = Bls12Pairing.Pair(negGen, G2Affine.Generator);
+        var e2 = Fp12.Conjugate(Bls12Pairing.Pair(gen, G2Affine.Generator));
         Assert.True(Fp12.Equal(e1, e2));
     }
 

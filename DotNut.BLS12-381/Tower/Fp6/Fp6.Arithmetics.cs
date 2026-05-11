@@ -41,6 +41,27 @@ public readonly partial struct Fp6
         );
     }
 
+    // Multiply by (0, b1, 0) - sparse, used by Fp12.MulBy014
+    public static Fp6 MulBy1(Fp6 a, Fp2 b1)
+    {
+        return new Fp6(
+            Fp2.MultiplyByNonResidue(Fp2.Multiply(a.C2, b1)),
+            Fp2.Multiply(a.C0, b1),
+            Fp2.Multiply(a.C1, b1)
+        );
+    }
+
+    // Multiply by (b0, b1, 0) - sparse, used by Fp12.MulBy014
+    public static Fp6 MulBy01(Fp6 a, Fp2 b0, Fp2 b1)
+    {
+        var aa = Fp2.Multiply(a.C0, b0);
+        var bb = Fp2.Multiply(a.C1, b1);
+        var t1 = Fp2.Add(Fp2.MultiplyByNonResidue(Fp2.Multiply(a.C2, b1)), aa);
+        var t2 = Fp2.Subtract(Fp2.Subtract(Fp2.Multiply(Fp2.Add(b0, b1), Fp2.Add(a.C0, a.C1)), aa), bb);
+        var t3 = Fp2.Add(Fp2.Multiply(a.C2, b0), bb);
+        return new Fp6(t1, t2, t3);
+    }
+
     public static Fp6 Multiply(Fp6 a, Fp6 b)
     {
         Fp2 t0 = Fp2.Multiply(a.C0, b.C0);

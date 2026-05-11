@@ -8,7 +8,8 @@ namespace DotNut.BLS12_381.Pairing;
 
 public static class Bls12Pairing
 {
-    private static readonly BigInteger AteLoopSize = BigInteger.Parse("d201000000010000", NumberStyles.AllowHexSpecifier);
+    // Leading "0" required: AllowHexSpecifier treats high bit as sign (two's complement).
+    private static readonly BigInteger AteLoopSize = BigInteger.Parse("0d201000000010000", NumberStyles.AllowHexSpecifier);
     private static readonly Fp2 Fp2Div2 = DivideBy2(Fp2.One);
 
     public static Fp12 Pair(G1Affine p, G2Affine q)
@@ -106,12 +107,7 @@ public static class Bls12Pairing
     {
         var o1 = MulByFp(c1, px);
         var o4 = MulByFp(c2, py);
-
-        var sparse = new Fp12(
-            new Fp6(c0, o1, Fp2.Zero),
-            new Fp6(Fp2.Zero, o4, Fp2.Zero)
-        );
-        return Fp12.Multiply(f, sparse);
+        return Fp12.MulBy014(f, c0, o1, o4);
     }
 
     private static List<int> NafDecomposition(BigInteger a)

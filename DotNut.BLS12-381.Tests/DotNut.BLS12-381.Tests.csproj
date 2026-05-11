@@ -15,10 +15,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Arithmetic\" />
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="..\DotNut.BLS12-381\DotNut.BLS12-381.csproj" />
     </ItemGroup>
 
