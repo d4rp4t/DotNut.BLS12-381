@@ -1,5 +1,4 @@
 using DotNut.BLS12_381.Tower;
-using System.Numerics;
 
 namespace DotNut.BLS12_381.Curve.G2;
 
@@ -56,20 +55,45 @@ public readonly struct G2Projective(Fp2 x, Fp2 y, Fp2 z)
         return new G2Projective(x3, y3, z3);
     }
 
-    public static G2Projective ScalarMultiply(G2Projective p, BigInteger k)
+    public static G2Projective ScalarMultiply(G2Projective p, Scalar k)
     {
-        if (k.Sign < 0) throw new ArgumentOutOfRangeException(nameof(k));
-        var acc = Infinity;
-        var cur = p;
-        var e = k;
-        while (e > 0)
+        var r0 = Infinity;
+        var r1 = p;
+
+        for (int i = 254; i >= 0; i--)
         {
-            if (!e.IsEven) acc = Add(acc, cur);
-            cur = Double(cur);
-            e >>= 1;
+            ulong bit = k.GetBit(i);
+            (r0, r1) = CtSwap(bit, r0, r1);
+            r1 = Add(r0, r1);
+            r0 = Double(r0);
+            (r0, r1) = CtSwap(bit, r0, r1);
         }
-        return acc;
+
+        return r0;
     }
+
+    private static (G2Projective, G2Projective) CtSwap(ulong bit, G2Projective a, G2Projective b)
+    {
+        ulong mask = 0UL - bit;
+        return (
+            new G2Projective(CtSelect(mask, b.X, a.X), CtSelect(mask, b.Y, a.Y), CtSelect(mask, b.Z, a.Z)),
+            new G2Projective(CtSelect(mask, a.X, b.X), CtSelect(mask, a.Y, b.Y), CtSelect(mask, a.Z, b.Z))
+        );
+    }
+
+    private static Fp2 CtSelect(ulong mask, Fp2 x, Fp2 y) => new(
+        CtSelectFp(mask, x.C0, y.C0),
+        CtSelectFp(mask, x.C1, y.C1)
+    );
+
+    private static Fp CtSelectFp(ulong mask, Fp x, Fp y) => new(
+        (x.L0 & mask) | (y.L0 & ~mask),
+        (x.L1 & mask) | (y.L1 & ~mask),
+        (x.L2 & mask) | (y.L2 & ~mask),
+        (x.L3 & mask) | (y.L3 & ~mask),
+        (x.L4 & mask) | (y.L4 & ~mask),
+        (x.L5 & mask) | (y.L5 & ~mask)
+    );
 
     public G2Affine ToAffine()
     {

@@ -37,9 +37,9 @@ public sealed class G1Tests
     public void ScalarMul_SmallValues_ShouldBeConsistent()
     {
         var g = G1Affine.Generator.ToProjective();
-        var one = G1Projective.ScalarMultiply(g, BigInteger.One).ToAffine();
-        var two = G1Projective.ScalarMultiply(g, new BigInteger(2)).ToAffine();
-        var three = G1Projective.ScalarMultiply(g, new BigInteger(3)).ToAffine();
+        var one = G1Projective.ScalarMultiply(g, new Scalar(1, 0, 0, 0)).ToAffine();
+        var two = G1Projective.ScalarMultiply(g, new Scalar(2, 0, 0, 0)).ToAffine();
+        var three = G1Projective.ScalarMultiply(g, new Scalar(3, 0, 0, 0)).ToAffine();
 
         Assert.True(AffineEqual(one, G1Affine.Generator));
         Assert.True(AffineEqual(two, G1Projective.Double(g).ToAffine()));
@@ -50,7 +50,7 @@ public sealed class G1Tests
     public void ScalarMul_Zero_ShouldReturn_Infinity()
     {
         var g = G1Affine.Generator.ToProjective();
-        var zero = G1Projective.ScalarMultiply(g, BigInteger.Zero).ToAffine();
+        var zero = G1Projective.ScalarMultiply(g, new Scalar(0, 0, 0, 0)).ToAffine();
         Assert.True(zero.IsInfinity);
     }
 
@@ -93,8 +93,8 @@ public sealed class G1Tests
             var k1 = random.Next(0, 1 << 16);
             var k2 = random.Next(0, 1 << 16);
 
-            var pJac = G1Projective.ScalarMultiply(g.ToProjective(), new BigInteger(k1));
-            var qJac = G1Projective.ScalarMultiply(g.ToProjective(), new BigInteger(k2));
+            var pJac = G1Projective.ScalarMultiply(g.ToProjective(), Scalar.FromBigInteger(new BigInteger(k1)));
+            var qJac = G1Projective.ScalarMultiply(g.ToProjective(), Scalar.FromBigInteger(new BigInteger(k2)));
             var jacAdd = G1Projective.Add(pJac, qJac).ToAffine();
             var jacDbl = G1Projective.Double(pJac).ToAffine();
 
@@ -129,7 +129,7 @@ public sealed class G1Tests
         // https://eips.ethereum.org/assets/eip-2537/mul_G1_bls.json
         var g = G1Affine.Generator.ToProjective();
         var scalar = BigInteger.Parse("263dbd792f5b1be47ed85f8938c0f29586af0d3ac7b977f21c278fe1462040e3", System.Globalization.NumberStyles.AllowHexSpecifier);
-        var result = G1Projective.ScalarMultiply(g, scalar).ToAffine();
+        var result = G1Projective.ScalarMultiply(g, Scalar.FromBigInteger(scalar)).ToAffine();
         var expected = ParseG1FromEipOutput(
             "000000000000000000000000000000000491d1b0ecd9bb917989f0e74f0dea0422eac4a873e5e2644f368dffb9a6e20fd6e10c1b77654d067c0618f6e5a7f79a" +
             "0000000000000000000000000000000017cd7061575d3e8034fcea62adaa1a3bc38dca4b50e4c5c01d04dd78037c9cee914e17944ea99e7ad84278e5d49f36c4"
@@ -143,7 +143,7 @@ public sealed class G1Tests
         // Source for subgroup order r:
         // https://www.rfc-editor.org/rfc/rfc9380.html#appendix-J.4
         var g = G1Affine.Generator.ToProjective();
-        var result = G1Projective.ScalarMultiply(g, GroupOrderR).ToAffine();
+        var result = G1Projective.ScalarMultiply(g, Scalar.FromBigInteger(GroupOrderR)).ToAffine();
         Assert.True(result.IsInfinity);
     }
 

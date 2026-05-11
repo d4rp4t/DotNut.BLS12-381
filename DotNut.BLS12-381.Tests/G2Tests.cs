@@ -44,9 +44,9 @@ public sealed class G2Tests
     public void ScalarMul_SmallValues_ShouldBeConsistent()
     {
         var g = G2Affine.Generator.ToProjective();
-        Assert.True(AffineEqual(G2Projective.ScalarMultiply(g, BigInteger.Zero).ToAffine(), G2Affine.Infinity));
-        Assert.True(AffineEqual(G2Projective.ScalarMultiply(g, BigInteger.One).ToAffine(), G2Affine.Generator));
-        Assert.True(AffineEqual(G2Projective.ScalarMultiply(g, new BigInteger(2)).ToAffine(), G2Projective.Double(g).ToAffine()));
+        Assert.True(AffineEqual(G2Projective.ScalarMultiply(g, new Scalar(0, 0, 0, 0)).ToAffine(), G2Affine.Infinity));
+        Assert.True(AffineEqual(G2Projective.ScalarMultiply(g, new Scalar(1, 0, 0, 0)).ToAffine(), G2Affine.Generator));
+        Assert.True(AffineEqual(G2Projective.ScalarMultiply(g, new Scalar(2, 0, 0, 0)).ToAffine(), G2Projective.Double(g).ToAffine()));
     }
 
     [Fact]
@@ -60,8 +60,8 @@ public sealed class G2Tests
             var k1 = random.Next(0, 1 << 14);
             var k2 = random.Next(0, 1 << 14);
 
-            var pJac = G2Projective.ScalarMultiply(g.ToProjective(), new BigInteger(k1));
-            var qJac = G2Projective.ScalarMultiply(g.ToProjective(), new BigInteger(k2));
+            var pJac = G2Projective.ScalarMultiply(g.ToProjective(), Scalar.FromBigInteger(new BigInteger(k1)));
+            var qJac = G2Projective.ScalarMultiply(g.ToProjective(), Scalar.FromBigInteger(new BigInteger(k2)));
 
             var jacAdd = G2Projective.Add(pJac, qJac).ToAffine();
             var jacDbl = G2Projective.Double(pJac).ToAffine();
@@ -111,7 +111,7 @@ public sealed class G2Tests
         // https://eips.ethereum.org/assets/eip-2537/mul_G2_bls.json
         var g = G2Affine.Generator.ToProjective();
         var scalar = BigInteger.Parse("263dbd792f5b1be47ed85f8938c0f29586af0d3ac7b977f21c278fe1462040e3", System.Globalization.NumberStyles.AllowHexSpecifier);
-        var result = G2Projective.ScalarMultiply(g, scalar).ToAffine();
+        var result = G2Projective.ScalarMultiply(g, Scalar.FromBigInteger(scalar)).ToAffine();
         var expected = ParseG2FromEipOutput(
             "0000000000000000000000000000000014856c22d8cdb2967c720e963eedc999e738373b14172f06fc915769d3cc5ab7ae0a1b9c38f48b5585fb09d4bd2733bb" +
             "000000000000000000000000000000000c400b70f6f8cd35648f5c126cce5417f3be4d8eefbd42ceb4286a14df7e03135313fe5845e3a575faab3e8b949d2488" +
@@ -125,7 +125,7 @@ public sealed class G2Tests
     public void SubgroupCheck_RTimesGenerator_ShouldBeInfinity()
     {
         var g = G2Affine.Generator.ToProjective();
-        var result = G2Projective.ScalarMultiply(g, GroupOrderR).ToAffine();
+        var result = G2Projective.ScalarMultiply(g, Scalar.FromBigInteger(GroupOrderR)).ToAffine();
         Assert.True(result.IsInfinity);
     }
 

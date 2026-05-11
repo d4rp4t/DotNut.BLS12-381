@@ -27,6 +27,14 @@ public readonly struct G1Affine(Fp x, Fp y, bool isInfinity = false)
         return Fp.Equal(lhs, rhs);
     }
 
+    // verifies the point is in the G1 subgroup of order r.
+    // IsOnCurve() alone is insufficient, points not in the subgroup enable small-subgroup attacks
+    public bool IsInSubgroup()
+    {
+        if (!IsOnCurve()) return false;
+        return G1Projective.ScalarMultiply(ToProjective(), Scalar.GroupOrderR).IsInfinity;
+    }
+
     public G1Projective ToProjective()
     {
         return IsInfinity ? G1Projective.Infinity : new G1Projective(X, Y, Fp.One);

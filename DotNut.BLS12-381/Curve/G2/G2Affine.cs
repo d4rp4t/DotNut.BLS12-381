@@ -31,6 +31,14 @@ public readonly struct G2Affine(Fp2 x, Fp2 y, bool isInfinity = false)
         return Fp2.Equal(lhs, rhs);
     }
 
+    // Verifies the point is in the G2 subgroup of order r.
+    // IsOnCurve() alone is insufficient — points not in the subgroup enable small-subgroup attacks.
+    public bool IsInSubgroup()
+    {
+        if (!IsOnCurve()) return false;
+        return G2Projective.ScalarMultiply(ToProjective(), Scalar.GroupOrderR).IsInfinity;
+    }
+
     public G2Projective ToProjective()
     {
         return IsInfinity ? G2Projective.Infinity : new G2Projective(X, Y, Fp2.One);
