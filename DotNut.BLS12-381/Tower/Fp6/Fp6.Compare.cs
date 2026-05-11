@@ -16,8 +16,8 @@ public readonly partial struct Fp6
     public static bool Equal(Fp6 a, Fp6 b)
     {
         return Fp2.Equal(a.C0, b.C0)
-               && Fp2.Equal(a.C1, b.C1)
-               && Fp2.Equal(a.C2, b.C2);
+               & Fp2.Equal(a.C1, b.C1)
+               & Fp2.Equal(a.C2, b.C2);
     }
 
     public static bool operator ==(Fp6 a, Fp6 b) => Equal(a, b);

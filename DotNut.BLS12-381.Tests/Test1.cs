@@ -180,7 +180,8 @@ public sealed class Test1
         for (var i = 0; i < 100; i++)
         {
             var a = RandomCanonicalFp(random);
-            var bytes = Fp.ToBytesBigEndian(a);
+            var bytes = new byte[48];
+            Fp.ToBytesBigEndian(a, bytes);
             var b = Fp.FromBytesBigEndian(bytes);
             Assert.Equal(ToBigInteger(a), ToBigInteger(b));
         }
@@ -214,7 +215,8 @@ public sealed class Test1
         for (var i = 0; i < 100; i++)
         {
             var a = RandomCanonicalFp(random);
-            var bytes = Fp.ToBytesLittleEndian(a);
+            var bytes = new byte[48];
+            Fp.ToBytesLittleEndian(a, bytes);
             var b = Fp.FromBytesLittleEndian(bytes);
             Assert.Equal(ToBigInteger(a), ToBigInteger(b));
         }
@@ -252,7 +254,9 @@ public sealed class Test1
 
     private static BigInteger ToBigInteger(Fp value)
     {
-        return new BigInteger(Fp.ToBytesBigEndian(value), isUnsigned: true, isBigEndian: true);
+        var bytes = new byte[48];
+        Fp.ToBytesBigEndian(value, bytes);
+        return new BigInteger(bytes, isUnsigned: true, isBigEndian: true);
     }
 
     private static BigInteger RawToBigInteger(Fp value)

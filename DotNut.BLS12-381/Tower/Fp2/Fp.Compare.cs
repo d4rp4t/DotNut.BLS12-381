@@ -4,7 +4,7 @@ public readonly partial struct Fp2
 {
     public static int Compare(Fp2 a, Fp2 b)
     {
-        var c1 = Fp.Compare(a.C1, b.C1);
+        int c1 = Fp.Compare(a.C1, b.C1);
         if (c1 != 0) return c1;
         return Fp.Compare(a.C0, b.C0);
     }
@@ -12,7 +12,7 @@ public readonly partial struct Fp2
     public static bool Equal(Fp2 a, Fp2 b)
     {
         return Fp.Equal(a.C0, b.C0)
-               && Fp.Equal(a.C1, b.C1);
+               & Fp.Equal(a.C1, b.C1);
     }
 
     public static bool operator ==(Fp2 a, Fp2 b) => Equal(a, b);

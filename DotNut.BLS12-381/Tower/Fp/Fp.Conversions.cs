@@ -46,19 +46,19 @@ public readonly partial struct Fp
         return true;
     }
 
-    public static byte[] ToBytesBigEndian(Fp value)
+    public static void ToBytesBigEndian(Fp value, Span<byte> destination)
     {
+        if (destination.Length < 48)
+        {
+            throw new ArgumentException("Destination must be at least 48 bytes.");
+        }
         var canonical = ToCanonical(value);
-        var bytes = new byte[48];
-
-        BinaryPrimitives.WriteUInt64BigEndian(bytes.AsSpan(0, 8), canonical.L5);
-        BinaryPrimitives.WriteUInt64BigEndian(bytes.AsSpan(8, 8), canonical.L4);
-        BinaryPrimitives.WriteUInt64BigEndian(bytes.AsSpan(16, 8), canonical.L3);
-        BinaryPrimitives.WriteUInt64BigEndian(bytes.AsSpan(24, 8), canonical.L2);
-        BinaryPrimitives.WriteUInt64BigEndian(bytes.AsSpan(32, 8), canonical.L1);
-        BinaryPrimitives.WriteUInt64BigEndian(bytes.AsSpan(40, 8), canonical.L0);
-
-        return bytes;
+        BinaryPrimitives.WriteUInt64BigEndian(destination, canonical.L5);
+        BinaryPrimitives.WriteUInt64BigEndian(destination[8..], canonical.L4);
+        BinaryPrimitives.WriteUInt64BigEndian(destination[16..], canonical.L3);
+        BinaryPrimitives.WriteUInt64BigEndian(destination[24..], canonical.L2);
+        BinaryPrimitives.WriteUInt64BigEndian(destination[32..], canonical.L1);
+        BinaryPrimitives.WriteUInt64BigEndian(destination[40..], canonical.L0);
     }
 
     public static Fp FromBytesLittleEndian(ReadOnlySpan<byte> bytes)
@@ -105,29 +105,25 @@ public readonly partial struct Fp
         return true;
     }
 
-    public static byte[] ToBytesLittleEndian(Fp value)
+    public static void ToBytesLittleEndian(Fp value, Span<byte> destination)
     {
+        if (destination.Length < 48)
+        {
+            throw new ArgumentException("Destination must be at least 48 bytes.");
+        }
+        
         var canonical = ToCanonical(value);
-        var bytes = new byte[48];
-
-        BinaryPrimitives.WriteUInt64LittleEndian(bytes.AsSpan(0, 8), canonical.L0);
-        BinaryPrimitives.WriteUInt64LittleEndian(bytes.AsSpan(8, 8), canonical.L1);
-        BinaryPrimitives.WriteUInt64LittleEndian(bytes.AsSpan(16, 8), canonical.L2);
-        BinaryPrimitives.WriteUInt64LittleEndian(bytes.AsSpan(24, 8), canonical.L3);
-        BinaryPrimitives.WriteUInt64LittleEndian(bytes.AsSpan(32, 8), canonical.L4);
-        BinaryPrimitives.WriteUInt64LittleEndian(bytes.AsSpan(40, 8), canonical.L5);
-
-        return bytes;
+        BinaryPrimitives.WriteUInt64LittleEndian(destination,       canonical.L0);
+        BinaryPrimitives.WriteUInt64LittleEndian(destination[8..],  canonical.L1);
+        BinaryPrimitives.WriteUInt64LittleEndian(destination[16..], canonical.L2);
+        BinaryPrimitives.WriteUInt64LittleEndian(destination[24..], canonical.L3);
+        BinaryPrimitives.WriteUInt64LittleEndian(destination[32..], canonical.L4);
+        BinaryPrimitives.WriteUInt64LittleEndian(destination[40..], canonical.L5);
     }
 
     private static bool GreaterThanOrEqualCanonical(Fp a, Fp b)
     {
-        if (a.L5 != b.L5) return a.L5 > b.L5;
-        if (a.L4 != b.L4) return a.L4 > b.L4;
-        if (a.L3 != b.L3) return a.L3 > b.L3;
-        if (a.L2 != b.L2) return a.L2 > b.L2;
-        if (a.L1 != b.L1) return a.L1 > b.L1;
-        if (a.L0 != b.L0) return a.L0 > b.L0;
-        return true;
+        SubtractUnchecked(a, b, out ulong borrow);
+        return borrow == 0;
     }
 }

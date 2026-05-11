@@ -53,8 +53,9 @@ public readonly partial struct Fp
             for (int bit = 63; bit >= 0; bit--)
             {
                 result = Square(result);
-                if (((e >> bit) & 1UL) != 0)
-                    result = Multiply(result, baseValue);
+                Fp multiplied = Multiply(result, baseValue);
+                ulong b = (e >> bit) & 1UL;
+                result = Select(b, multiplied, result);
             }
         }
 
@@ -98,52 +99,35 @@ public readonly partial struct Fp
 
     private static ulong SubBorrow(ulong a, ulong b, ulong borrowIn, out ulong borrowOut)
     {
-        UInt128 subtrahend = (UInt128)b + borrowIn;
-        borrowOut = a < subtrahend ? 1UL : 0UL;
-        return (ulong)((UInt128)a - subtrahend);
+        UInt128 diff = (UInt128)a - b - borrowIn;
+        borrowOut = (ulong)(diff >> 64) & 1UL;
+        return (ulong)diff;
     }
 
-    internal static ulong[] SquareWide(Fp a)
-    {
-        var acc = new UInt128[13];
-        ulong[] x = [a.L0, a.L1, a.L2, a.L3, a.L4, a.L5];
-
-        for (int i = 0; i < 6; i++)
-            MultiplyAccumulate(acc, i + i, x[i], x[i]);
-
-        for (int i = 0; i < 6; i++)
-        {
-            for (int j = i + 1; j < 6; j++)
-            {
-                MultiplyAccumulate(acc, i + j, x[i], x[j]);
-                MultiplyAccumulate(acc, i + j, x[i], x[j]);
-            }
-        }
-
-        return
-        [
-            (ulong)acc[0], (ulong)acc[1], (ulong)acc[2], (ulong)acc[3], (ulong)acc[4], (ulong)acc[5],
-            (ulong)acc[6], (ulong)acc[7], (ulong)acc[8], (ulong)acc[9], (ulong)acc[10], (ulong)acc[11]
-        ];
-    }
+    internal static ulong[] SquareWide(Fp a) => MultiplyWide(a, a);
 
     internal static ulong[] MultiplyWide(Fp a, Fp b)
     {
-        var acc = new UInt128[13];
+        var t = new ulong[12];
         ulong[] x = [a.L0, a.L1, a.L2, a.L3, a.L4, a.L5];
         ulong[] y = [b.L0, b.L1, b.L2, b.L3, b.L4, b.L5];
 
         for (int i = 0; i < 6; i++)
         {
+            ulong carry = 0;
             for (int j = 0; j < 6; j++)
-                MultiplyAccumulate(acc, i + j, x[i], y[j]);
+                t[i + j] = Mac(x[i], y[j], t[i + j], carry, out carry);
+            t[i + 6] = carry;
         }
 
-        return
-        [
-            (ulong)acc[0], (ulong)acc[1], (ulong)acc[2], (ulong)acc[3], (ulong)acc[4], (ulong)acc[5],
-            (ulong)acc[6], (ulong)acc[7], (ulong)acc[8], (ulong)acc[9], (ulong)acc[10], (ulong)acc[11]
-        ];
+        return t;
+    }
+
+    private static ulong Mac(ulong a, ulong b, ulong t, ulong c, out ulong carry)
+    {
+        UInt128 r = (UInt128)a * b + t + c;
+        carry = (ulong)(r >> 64);
+        return (ulong)r;
     }
 
     private static Fp MontgomeryReduce(ulong[] t12)
@@ -176,32 +160,6 @@ public readonly partial struct Fp
         Fp rMinusP = SubtractUnchecked(r, Modulus, out ulong borrow);
         ulong shouldSubtract = borrow ^ 1UL;
         return Select(shouldSubtract, rMinusP, r);
-    }
-
-    private static void MultiplyAccumulate(UInt128[] acc, int index, ulong x, ulong y)
-    {
-        UInt128 product = (UInt128)x * y;
-        acc[index] += product;
-
-        int k = index;
-        while ((acc[k] >> 64) != 0)
-        {
-            UInt128 carry = acc[k] >> 64;
-            acc[k] &= ulong.MaxValue;
-            k++;
-            acc[k] += carry;
-        }
-    }
-
-    private static bool GreaterThanOrEqualByLimbs(Fp a, Fp b)
-    {
-        if (a.L5 != b.L5) return a.L5 > b.L5;
-        if (a.L4 != b.L4) return a.L4 > b.L4;
-        if (a.L3 != b.L3) return a.L3 > b.L3;
-        if (a.L2 != b.L2) return a.L2 > b.L2;
-        if (a.L1 != b.L1) return a.L1 > b.L1;
-        if (a.L0 != b.L0) return a.L0 > b.L0;
-        return true;
     }
 
     private static Fp Select(ulong bit, Fp whenOne, Fp whenZero)

@@ -12,7 +12,7 @@ public readonly partial struct Fp12
     public static bool Equal(Fp12 a, Fp12 b)
     {
         return Fp6.Equal(a.C0, b.C0)
-               && Fp6.Equal(a.C1, b.C1);
+               & Fp6.Equal(a.C1, b.C1);
     }
 
     public static bool operator ==(Fp12 a, Fp12 b) => Equal(a, b);
