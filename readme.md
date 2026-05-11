@@ -1,15 +1,23 @@
 # DotNut.BLS12-381
-========== WORK IN PROGRESS ==========
-This repository contains C# native implementation of BLS12-381 curve. 
 
-**The author is not a cryptographer, and the work wasn't audited. No warranties are made.**
+> **Work in progress**
+>
+> This repository contains a native C# implementation of the **BLS12-381** elliptic curve.
+>
+> **The author is not a cryptographer, and this code has not been audited.  
+> No warranties or security guarantees are provided.**
 
-I simply made it for fun.
+# Reference 
+This library is mostly based on [zkcrypto](https://github.com/zkcrypto/bls12_381) rust library. Althrough, i've tried to test it agains as many test vectors as I can.
+# Docs
+There aren't any.
 
-Every entity in this library is struct based, because:
-a) struct have nice sequential memory alignment
-b) these live on stack, not on a shared heap
+## Security notes
 
-I tried to make it as constant-time as possible, but C# JIT can be.. well too much optimizing.
+I tried to make the implementation as **constant-time** as possible, although the C# JIT can sometimes introduce unexpected optimizations.
+
+Use with caution.
+
+---
 
 Peace.

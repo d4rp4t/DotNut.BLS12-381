@@ -2,7 +2,7 @@ using DotNut.BLS12_381.Tower;
 
 namespace DotNut.BLS12_381.Curve.G1;
 
-public readonly struct G1Affine(Fp x, Fp y, bool isInfinity = false)
+public readonly partial struct G1Affine(Fp x, Fp y, bool isInfinity = false)
 {
     public Fp X { get; } = x;
     public Fp Y { get; } = y;
