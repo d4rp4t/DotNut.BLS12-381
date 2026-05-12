@@ -32,11 +32,13 @@ public readonly partial struct G2Affine(Fp2 x, Fp2 y, bool isInfinity = false)
     }
 
     // Verifies the point is in the G2 subgroup of order r.
-    // IsOnCurve() alone is insufficient — points not in the subgroup enable small-subgroup attacks.
+    // Fast check: P in G2 iff psi(P) = [x]P where x = -BLS_X (negative BLS seed).
+    // Equivalently psi(P) + [BLS_X]P = O, replacing the slow 255-bit [r]P = O.
     public bool IsInSubgroup()
     {
         if (!IsOnCurve()) return false;
-        return G2Projective.ScalarMultiply(ToProjective(), Scalar.GroupOrderR).IsInfinity;
+        var p = ToProjective();
+        return G2Projective.Add(G2Projective.Psi(p), G2Projective.MulByBLSX(p)).IsInfinity;
     }
 
     public G2Projective ToProjective()

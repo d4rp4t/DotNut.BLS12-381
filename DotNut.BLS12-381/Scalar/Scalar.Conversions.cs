@@ -90,7 +90,7 @@ public readonly partial struct Scalar
     }
 
     // Reduces a 64-byte (512-bit) value mod r. Used for hash-to-scalar.
-    // (lo + hi·2^256) mod r - FromCanonical handles reduction implicitly via Montgomery
+    // (lo + hi*2^256) mod r - FromCanonical handles reduction implicitly via Montgomery
     public static Scalar FromBytesWide(ReadOnlySpan<byte> bytes)
     {
         if (bytes.Length != 64)

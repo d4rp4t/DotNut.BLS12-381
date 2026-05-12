@@ -20,7 +20,7 @@ public readonly partial struct Fp
         return borrow == 0;
     }
 
-    // sqrt via Shank's method: p ≡ 3 (mod 4) so sqrt(a) = a^((p+1)/4).
+    // sqrt via Shank's method: p == 3 (mod 4) so sqrt(a) = a^((p+1)/4).
     // Returns true if value is a quadratic residue; sqrt is undefined otherwise.
     public static bool TrySqrt(Fp value, out Fp sqrt)
     {

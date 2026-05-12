@@ -103,6 +103,28 @@ public readonly struct G1Projective(Fp x, Fp y, Fp z)
 
     public bool IsOnCurve() => ToAffine().IsOnCurve();
 
+    // h1 = 0xd201000000010001 = 1 + BLS_X; clears the E1(Fp) cofactor so the result is in G1.
+    public G1Projective ClearCofactor() => Add(this, MulByBLSX(this));
+
+    // [BLS_X]P via left-to-right binary double-and-add (BLS_X = 0xd201000000010000, 6 set bits).
+    internal static G1Projective MulByBLSX(G1Projective p)
+    {
+        const ulong BlsX = 0xd201_0000_0001_0000UL;
+        var acc = Infinity;
+        var foundOne = false;
+        for (var i = 63; i >= 0; i--)
+        {
+            var bit = ((BlsX >> i) & 1UL) != 0;
+            if (foundOne)
+                acc = Double(acc);
+            else
+                foundOne = bit;
+            if (bit)
+                acc = Add(acc, p);
+        }
+        return acc;
+    }
+
     private static Fp DoubleFp(Fp v) => Fp.Add(v, v);
     private static Fp TripleFp(Fp v) => Fp.Add(v, DoubleFp(v));
     private static Fp EightFp(Fp v) => DoubleFp(DoubleFp(DoubleFp(v)));
