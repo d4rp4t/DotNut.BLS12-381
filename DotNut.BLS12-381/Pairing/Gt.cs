@@ -4,7 +4,9 @@ namespace DotNut.BLS12_381.Pairing;
 
 /// <summary>
 /// Element of GT, the target group of the BLS12-381 pairing.
-/// Written additively; internally Fp12 multiplication in the cyclotomic subgroup.
+/// GT is the order-r subgroup of Fp12* (the cyclotomic subgroup).
+/// The group operation is Fp12 multiplication; the identity is Fp12.One.
+/// Written additively in this API (Add = multiply, Negate = conjugate).
 /// </summary>
 public readonly struct Gt
 {
@@ -12,9 +14,13 @@ public readonly struct Gt
 
     internal Gt(Fp12 value) => Value = value;
 
+    /// <summary>The identity element of GT, corresponding to Fp12.One.</summary>
     public static readonly Gt Identity = new(Fp12.One);
 
-    // pairing(G1Affine.Generator, G2Affine.Generator) — hardcoded from zkcrypto/bls12_381
+    /// <summary>
+    /// The standard generator of GT, equal to e(G1.Generator, G2.Generator).
+    /// Hardcoded from the zkcrypto/bls12_381 reference implementation.
+    /// </summary>
     public static readonly Gt Generator = new(new Fp12(
         new Fp6(
             new Fp2(
@@ -58,14 +64,36 @@ public readonly struct Gt
         )
     ));
 
+    /// <summary>
+    /// Returns this element squared (doubled in additive notation).
+    /// Uses <see cref="Fp12.Square"/> on the underlying Fp12 value.
+    /// </summary>
     public Gt Double() => new(Fp12.Square(Value));
 
+    /// <summary>
+    /// Returns the inverse of <paramref name="a"/> in GT (negation in additive notation).
+    /// For elements in the cyclotomic subgroup, the inverse equals the conjugate.
+    /// </summary>
     public static Gt Negate(Gt a) => new(Fp12.Conjugate(a.Value));
 
+    /// <summary>
+    /// Returns a + b in GT (Fp12 multiplication of the underlying values).
+    /// Both inputs must be valid GT elements (in the cyclotomic subgroup).
+    /// </summary>
     public static Gt Add(Gt a, Gt b) => new(Fp12.Multiply(a.Value, b.Value));
 
+    /// <summary>
+    /// Returns a − b in GT as a + (−b).
+    /// </summary>
     public static Gt Subtract(Gt a, Gt b) => Add(a, Negate(b));
 
+    /// <summary>
+    /// Returns [scalar]·g in GT using double-and-add MSB-to-LSB over the 256-bit scalar.
+    /// Skips the leading zero bit of the scalar (since r &lt; 2^255, bit 255 is always 0).
+    /// Not constant-time.
+    /// </summary>
+    /// <param name="g">The GT element to multiply.</param>
+    /// <param name="scalar">The scalar multiplier in Fr.</param>
     public static Gt Multiply(Gt g, Scalar scalar)
     {
         // Double-and-add MSB-to-LSB, skipping the leading bit (always 0 for valid scalars < r)
@@ -87,7 +115,15 @@ public readonly struct Gt
         return acc;
     }
 
+    /// <summary>
+    /// Returns <see langword="true"/> if a and b are the same GT element.
+    /// Delegates to <see cref="Fp12.Equal"/>.
+    /// </summary>
     public static bool Equal(Gt a, Gt b) => Fp12.Equal(a.Value, b.Value);
 
+    /// <summary>
+    /// Returns <paramref name="b"/> if <paramref name="chooseB"/> is <see langword="true"/>, otherwise <paramref name="a"/>.
+    /// Not constant-time.
+    /// </summary>
     public static Gt ConditionalSelect(Gt a, Gt b, bool chooseB) => chooseB ? b : a;
 }

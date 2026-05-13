@@ -8,6 +8,10 @@ public readonly partial struct Fp12
     );
     private static readonly Fp6[] FrobeniusCoeffC1 = BuildFrobeniusCoeffC1();
 
+    /// <summary>
+    /// Returns a + b in Fp12. Performs component-wise Fp6 addition.
+    /// Both inputs must be in Montgomery form.
+    /// </summary>
     public static Fp12 Add(Fp12 a, Fp12 b)
     {
         return new Fp12(
@@ -16,6 +20,10 @@ public readonly partial struct Fp12
         );
     }
 
+    /// <summary>
+    /// Returns a − b in Fp12. Performs component-wise Fp6 subtraction.
+    /// Both inputs must be in Montgomery form.
+    /// </summary>
     public static Fp12 Subtract(Fp12 a, Fp12 b)
     {
         return new Fp12(
@@ -24,11 +32,20 @@ public readonly partial struct Fp12
         );
     }
 
+    /// <summary>
+    /// Returns −a in Fp12. Performs component-wise Fp6 negation.
+    /// Input must be in Montgomery form.
+    /// </summary>
     public static Fp12 Negate(Fp12 a)
     {
         return new Fp12(Fp6.Negate(a.C0), Fp6.Negate(a.C1));
     }
 
+    /// <summary>
+    /// Returns a · b in Fp12 using the identity (a0 + a1·w)(b0 + b1·w) = (a0·b0 + v·a1·b1) + (a0·b1 + a1·b0)·w,
+    /// where w² = v. Uses 3 Fp6 multiplications (Karatsuba).
+    /// Both inputs must be in Montgomery form.
+    /// </summary>
     public static Fp12 Multiply(Fp12 a, Fp12 b)
     {
         // (a0 + a1*w)(b0 + b1*w), w^2 = v
@@ -39,6 +56,10 @@ public readonly partial struct Fp12
         return new Fp12(c0, c1);
     }
 
+    /// <summary>
+    /// Returns a² in Fp12 using a 3-multiplication formula instead of 4 (as in <see cref="Multiply"/>(a, a)).
+    /// Input must be in Montgomery form.
+    /// </summary>
     public static Fp12 Square(Fp12 a)
     {
         // (a0 + a1*w)^2: uses 3 Fp6 muls instead of 4 in Multiply(a,a)
@@ -50,8 +71,16 @@ public readonly partial struct Fp12
         return new Fp12(c0, c1);
     }
 
-    // Multiply f by a sparse Fp12 of the form (c0, c1, 0; 0, c4, 0).
-    // Positions 0,1,4 are non-zero
+    /// <summary>
+    /// Multiplies <paramref name="f"/> by a sparse Fp12 element whose only non-zero Fp2 sub-components
+    /// are at positions 0, 1, and 4 in the tower decomposition.
+    /// Used in the Miller loop line evaluation step; avoids unnecessary Fp6 multiplications.
+    /// </summary>
+    /// <param name="f">The dense Fp12 accumulator. Must be in Montgomery form.</param>
+    /// <param name="c0">Non-zero Fp2 coefficient at position 0.</param>
+    /// <param name="c1">Non-zero Fp2 coefficient at position 1.</param>
+    /// <param name="c4">Non-zero Fp2 coefficient at position 4.</param>
+    /// <returns>f · sparse in Montgomery form.</returns>
     public static Fp12 MulBy014(Fp12 f, Fp2 c0, Fp2 c1, Fp2 c4)
     {
         var aa = Fp6.MulBy01(f.C0, c0, c1);
@@ -63,6 +92,11 @@ public readonly partial struct Fp12
         return new Fp12(newC0, newC1);
     }
 
+    /// <summary>
+    /// Returns a⁻¹ in Fp12 using (a0 + a1·w)⁻¹ = (a0 − a1·w) / (a0² − v·a1²).
+    /// The denominator is an element of Fp6; its inverse is computed via <see cref="Fp6.Invert"/>.
+    /// </summary>
+    /// <remarks>Behaviour for the zero element is determined by <see cref="Fp6.Invert"/>.</remarks>
     public static Fp12 Invert(Fp12 a)
     {
         // (a0 + a1*w)^-1 = (a0 - a1*w)/(a0^2 - v*a1^2)
@@ -76,6 +110,12 @@ public readonly partial struct Fp12
         );
     }
 
+    /// <summary>
+    /// Computes <paramref name="value"/>^<paramref name="exponent"/> in Fp12 using square-and-multiply (LSB-first).
+    /// </summary>
+    /// <param name="value">Base element in Montgomery form.</param>
+    /// <param name="exponent">Non-negative exponent; negative values throw <see cref="ArgumentOutOfRangeException"/>.</param>
+    /// <returns>value^exponent in Montgomery form.</returns>
     public static Fp12 Pow(Fp12 value, System.Numerics.BigInteger exponent)
     {
         if (exponent.Sign < 0) throw new ArgumentOutOfRangeException(nameof(exponent));
@@ -92,6 +132,14 @@ public readonly partial struct Fp12
         return result;
     }
 
+    /// <summary>
+    /// Applies the p^<paramref name="power"/>-power Frobenius endomorphism to <paramref name="a"/>.
+    /// C0 is transformed via <see cref="Fp6.FrobeniusMap"/>; C1 is additionally scaled by the precomputed
+    /// Frobenius coefficient for Fp12.
+    /// </summary>
+    /// <param name="a">Input element in Montgomery form.</param>
+    /// <param name="power">The Frobenius power; reduced modulo 12 internally.</param>
+    /// <returns>Frobenius(a, power) in Montgomery form.</returns>
     public static Fp12 FrobeniusMap(Fp12 a, int power)
     {
         var idx = ((power % 12) + 12) % 12;
@@ -101,11 +149,27 @@ public readonly partial struct Fp12
         );
     }
 
+    /// <summary>
+    /// Returns the conjugate ā = C0 − C1·w of <paramref name="a"/> in Fp12.
+    /// For elements in the cyclotomic subgroup (GT), the conjugate equals the inverse.
+    /// Input must be in Montgomery form.
+    /// </summary>
     public static Fp12 Conjugate(Fp12 a)
     {
         return new Fp12(a.C0, Fp6.Negate(a.C1));
     }
 
+    /// <summary>
+    /// Computes f² in Fp12 using the optimized cyclotomic squaring formula (Algorithm 5.5.4).
+    /// Only correct when <paramref name="f"/> is in the cyclotomic subgroup (i.e. f^(p^6+1) = 1,
+    /// which is guaranteed after <see cref="FinalExponentiation"/>).
+    /// Uses 6 Fp2 squarings and 2 Fp2 multiplications instead of a general Fp12 squaring.
+    /// </summary>
+    /// <remarks>
+    /// Do not call this on arbitrary Fp12 elements — use <see cref="Square"/> instead.
+    /// The z-variable mapping follows the zkcrypto convention:
+    /// z0=C0.C0, z4=C0.C1, z3=C0.C2, z2=C1.C0, z1=C1.C1, z5=C1.C2.
+    /// </remarks>
     public static Fp12 CyclotomicSquare(Fp12 f)
     {
         // Algorithm 5.5.4 - only correct for elements in the cyclotomic subgroup
@@ -143,6 +207,13 @@ public readonly partial struct Fp12
         );
     }
 
+    /// <summary>
+    /// Computes <paramref name="a"/>^<paramref name="exponent"/> in Fp12 using <see cref="CyclotomicSquare"/>
+    /// in place of general squaring (LSB-first square-and-multiply).
+    /// Only correct when <paramref name="a"/> is in the cyclotomic subgroup.
+    /// </summary>
+    /// <param name="a">Base element in the cyclotomic subgroup, in Montgomery form.</param>
+    /// <param name="exponent">Non-negative exponent; negative values throw <see cref="ArgumentOutOfRangeException"/>.</param>
     public static Fp12 CyclotomicExp(Fp12 a, System.Numerics.BigInteger exponent)
     {
         if (exponent.Sign < 0) throw new ArgumentOutOfRangeException(nameof(exponent));
@@ -159,6 +230,13 @@ public readonly partial struct Fp12
         return result;
     }
 
+    /// <summary>
+    /// Computes the final exponentiation f^((p^12 − 1)/r) that maps a Miller loop result into GT.
+    /// Comprises an easy part f^((p^6−1)(p^2+1)) and a hard part using the Beuchat et al. method.
+    /// Input does not need to be in the cyclotomic subgroup; the easy part projects it there.
+    /// </summary>
+    /// <param name="a">Miller loop output in Montgomery form.</param>
+    /// <returns>The pairing value in GT (cyclotomic subgroup of Fp12), in Montgomery form.</returns>
     public static Fp12 FinalExponentiation(Fp12 a)
     {
         // Easy part: f^((p^6 - 1)(p^2 + 1))
@@ -191,6 +269,10 @@ public readonly partial struct Fp12
         return Multiply(t3, t4);
     }
 
+    /// <summary>
+    /// Computes the squaring in the Fp4 subfield used by <see cref="CyclotomicSquare"/>.
+    /// Returns (c0, c1) = ((a² + ξ·b²), (2·a·b)) with ξ = Fp2 non-residue, using 2 Fp2 squarings.
+    /// </summary>
     private static (Fp2 c0, Fp2 c1) Fp4Square(Fp2 a, Fp2 b)
     {
         var t0 = Fp2.Square(a);
@@ -203,6 +285,14 @@ public readonly partial struct Fp12
         return (c0, c1);
     }
 
+    /// <summary>
+    /// Computes f^BLS_X using left-to-right binary exponentiation and <see cref="CyclotomicSquare"/>,
+    /// then conjugates because BLS_X is negative for BLS12-381.
+    /// BLS_X = 0xd201000000010000 (6 set bits; 64-bit scalar).
+    /// Only correct when <paramref name="f"/> is in the cyclotomic subgroup.
+    /// </summary>
+    /// <param name="f">Element of the cyclotomic subgroup in Montgomery form.</param>
+    /// <returns>f^(−BLS_X) in Montgomery form (conjugate applied for the negative seed).</returns>
     internal static Fp12 CyclotomicExpBlsX(Fp12 f)
     {
         // BLS_X = 0xd201000000010000, negative -> conjugate at end
@@ -222,6 +312,11 @@ public readonly partial struct Fp12
         return Conjugate(tmp);
     }
 
+    /// <summary>
+    /// Computes the precomputed Frobenius coefficients for the C1 component of Fp12.
+    /// arr[i] = v^((p^i − 1)/2) where v ∈ Fp6 is the Fp12-over-Fp6 generator (v^2 = w).
+    /// Called once at static initialization.
+    /// </summary>
     private static Fp6[] BuildFrobeniusCoeffC1()
     {
         var arr = new Fp6[12];

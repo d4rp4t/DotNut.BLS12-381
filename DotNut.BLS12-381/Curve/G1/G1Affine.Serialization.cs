@@ -4,8 +4,12 @@ namespace DotNut.BLS12_381.Curve.G1;
 
 public readonly partial struct G1Affine
 {
-    // ZCash compressed format: 48 bytes, big-endian x with top 3 flag bits.
-    // Byte 0: bit7=C (compressed=1), bit6=I (infinity), bit5=S (lex-largest y)
+    /// <summary>
+    /// Serializes this point to the ZCash compressed format (48 bytes, big-endian x-coordinate).
+    /// Byte 0 flag bits: bit 7 = C (compressed = 1), bit 6 = I (infinity), bit 5 = S (Y is lexicographically largest).
+    /// The S flag encodes the sign of Y so that the point can be recovered from X alone.
+    /// </summary>
+    /// <returns>48-byte compressed representation.</returns>
     public byte[] ToCompressed()
     {
         var buf = new byte[48];
@@ -18,8 +22,11 @@ public readonly partial struct G1Affine
         return buf;
     }
 
-    // ZCash uncompressed format: 96 bytes, big-endian x || y.
-    // Byte 0: bit7=0, bit6=I (infinity), bit5=0
+    /// <summary>
+    /// Serializes this point to the ZCash uncompressed format (96 bytes, big-endian x || y).
+    /// Byte 0 flag bits: bit 7 = 0 (uncompressed), bit 6 = I (infinity), bit 5 = 0.
+    /// </summary>
+    /// <returns>96-byte uncompressed representation.</returns>
     public byte[] ToUncompressed()
     {
         var buf = new byte[96];
@@ -30,6 +37,14 @@ public readonly partial struct G1Affine
         return buf;
     }
 
+    /// <summary>
+    /// Attempts to deserialize a G1 point from the ZCash compressed format (48 bytes).
+    /// Validates the compression flag, reconstructs Y from the curve equation y² = x³ + 4,
+    /// and verifies that the point is in the G1 prime-order subgroup.
+    /// </summary>
+    /// <param name="bytes">48-byte compressed encoding.</param>
+    /// <param name="point">The decoded point on success; <see cref="Infinity"/> on failure.</param>
+    /// <returns><see langword="true"/> if decoding and validation succeeded.</returns>
     public static bool TryFromCompressed(ReadOnlySpan<byte> bytes, out G1Affine point)
     {
         point = Infinity;
@@ -70,6 +85,13 @@ public readonly partial struct G1Affine
         return true;
     }
 
+    /// <summary>
+    /// Attempts to deserialize a G1 point from the ZCash uncompressed format (96 bytes).
+    /// Validates flags, parses X and Y directly, and checks curve membership and subgroup membership.
+    /// </summary>
+    /// <param name="bytes">96-byte uncompressed encoding.</param>
+    /// <param name="point">The decoded point on success; <see cref="Infinity"/> on failure.</param>
+    /// <returns><see langword="true"/> if decoding and validation succeeded.</returns>
     public static bool TryFromUncompressed(ReadOnlySpan<byte> bytes, out G1Affine point)
     {
         point = Infinity;

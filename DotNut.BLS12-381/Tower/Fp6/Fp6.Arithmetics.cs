@@ -8,6 +8,11 @@ public readonly partial struct Fp6
     );
     private static readonly Fp2[] FrobeniusCoeffC1 = BuildFrobeniusCoeff(1);
     private static readonly Fp2[] FrobeniusCoeffC2 = BuildFrobeniusCoeff(2);
+
+    /// <summary>
+    /// Returns a + b in Fp6. Performs component-wise Fp2 addition.
+    /// Both inputs must be in Montgomery form.
+    /// </summary>
     public static Fp6 Add(Fp6 a, Fp6 b)
     {
         return new Fp6(
@@ -17,6 +22,10 @@ public readonly partial struct Fp6
             );
     }
 
+    /// <summary>
+    /// Returns a − b in Fp6. Performs component-wise Fp2 subtraction.
+    /// Both inputs must be in Montgomery form.
+    /// </summary>
     public static Fp6 Subtract(Fp6 a, Fp6 b)
     {
         return new Fp6(
@@ -26,11 +35,21 @@ public readonly partial struct Fp6
         );
     }
 
+    /// <summary>
+    /// Returns −a in Fp6. Performs component-wise Fp2 negation.
+    /// Input must be in Montgomery form.
+    /// </summary>
     public static Fp6 Negate(Fp6 a)
     {
         return new Fp6(Fp2.Negate(a.C0), Fp2.Negate(a.C1), Fp2.Negate(a.C2));
     }
 
+    /// <summary>
+    /// Returns a · v in Fp6, where v is the generator of Fp6 over Fp2 (v³ = ξ = 1 + u).
+    /// Implements the shift: (c0 + c1·v + c2·v²) · v = c2·ξ + c0·v + c1·v².
+    /// Used in Fp12 arithmetic to multiply by the Fp12 non-residue.
+    /// Input must be in Montgomery form.
+    /// </summary>
     public static Fp6 MulByNonResidue(Fp6 a)
     {
         // (c0 + c1*v + c2*v^2) * v = (c2*xi) + c0*v + c1*v^2, xi = u+1
@@ -41,7 +60,13 @@ public readonly partial struct Fp6
         );
     }
 
-    // Multiply by (0, b1, 0) - sparse, used by Fp12.MulBy014
+    /// <summary>
+    /// Multiplies <paramref name="a"/> by the sparse Fp6 element (0, b1, 0).
+    /// Exploits sparsity to save Fp2 multiplications; used by <see cref="Fp12.MulBy014"/>.
+    /// Input must be in Montgomery form.
+    /// </summary>
+    /// <param name="a">Left operand (dense Fp6).</param>
+    /// <param name="b1">The non-zero Fp2 coefficient at degree 1.</param>
     public static Fp6 MulBy1(Fp6 a, Fp2 b1)
     {
         return new Fp6(
@@ -51,7 +76,14 @@ public readonly partial struct Fp6
         );
     }
 
-    // Multiply by (b0, b1, 0) - sparse, used by Fp12.MulBy014
+    /// <summary>
+    /// Multiplies <paramref name="a"/> by the sparse Fp6 element (b0, b1, 0).
+    /// Exploits sparsity to save Fp2 multiplications; used by <see cref="Fp12.MulBy014"/>.
+    /// Input must be in Montgomery form.
+    /// </summary>
+    /// <param name="a">Left operand (dense Fp6).</param>
+    /// <param name="b0">Non-zero Fp2 coefficient at degree 0.</param>
+    /// <param name="b1">Non-zero Fp2 coefficient at degree 1.</param>
     public static Fp6 MulBy01(Fp6 a, Fp2 b0, Fp2 b1)
     {
         var aa = Fp2.Multiply(a.C0, b0);
@@ -62,6 +94,10 @@ public readonly partial struct Fp6
         return new Fp6(t1, t2, t3);
     }
 
+    /// <summary>
+    /// Returns a · b in Fp6 using Karatsuba-style multiplication with 6 Fp2 multiplications.
+    /// Both inputs must be in Montgomery form.
+    /// </summary>
     public static Fp6 Multiply(Fp6 a, Fp6 b)
     {
         Fp2 t0 = Fp2.Multiply(a.C0, b.C0);
@@ -75,8 +111,17 @@ public readonly partial struct Fp6
         return new Fp6(c0, c1, c2);
     }
 
+    /// <summary>
+    /// Returns a² in Fp6. Delegates to <see cref="Multiply"/>(a, a).
+    /// Input must be in Montgomery form.
+    /// </summary>
     public static Fp6 Square(Fp6 a) => Multiply(a, a);
 
+    /// <summary>
+    /// Returns a⁻¹ in Fp6 using the standard formula for Fp6 = Fp2[v]/(v³ − ξ).
+    /// Reduces to a single Fp2 inversion.
+    /// </summary>
+    /// <remarks>Behaviour for the zero element is determined by <see cref="Fp2.Invert"/>.</remarks>
     public static Fp6 Invert(Fp6 a)
     {
         // Standard inversion for Fp6 over Fp2 with v^3 = xi (xi = u+1)
@@ -94,6 +139,12 @@ public readonly partial struct Fp6
         );
     }
 
+    /// <summary>
+    /// Computes <paramref name="value"/>^<paramref name="exponent"/> in Fp6 using square-and-multiply (LSB-first).
+    /// </summary>
+    /// <param name="value">Base element in Montgomery form.</param>
+    /// <param name="exponent">Non-negative exponent; negative values throw <see cref="ArgumentOutOfRangeException"/>.</param>
+    /// <returns>value^exponent in Montgomery form.</returns>
     public static Fp6 Pow(Fp6 value, System.Numerics.BigInteger exponent)
     {
         if (exponent.Sign < 0) throw new ArgumentOutOfRangeException(nameof(exponent));
@@ -110,6 +161,13 @@ public readonly partial struct Fp6
         return result;
     }
 
+    /// <summary>
+    /// Applies the p^<paramref name="power"/>-power Frobenius endomorphism to <paramref name="a"/>.
+    /// Uses precomputed Frobenius coefficients for C1 and C2; C0 is handled by <see cref="Fp2.FrobeniusMap"/>.
+    /// </summary>
+    /// <param name="a">Input element in Montgomery form.</param>
+    /// <param name="power">The Frobenius power; reduced modulo 6 internally.</param>
+    /// <returns>Frobenius(a, power) in Montgomery form.</returns>
     public static Fp6 FrobeniusMap(Fp6 a, int power)
     {
         var idx = ((power % 6) + 6) % 6;
@@ -120,6 +178,11 @@ public readonly partial struct Fp6
         );
     }
 
+    /// <summary>
+    /// Computes the Frobenius coefficients for component C<paramref name="factor"/> at powers 0..5.
+    /// arr[i] = ξ^(factor·(p^i − 1)/3) where ξ = Fp2.NonResidue.
+    /// Called once at static initialization; result stored in <see cref="FrobeniusCoeffC1"/> or <see cref="FrobeniusCoeffC2"/>.
+    /// </summary>
     private static Fp2[] BuildFrobeniusCoeff(int factor)
     {
         var arr = new Fp2[6];

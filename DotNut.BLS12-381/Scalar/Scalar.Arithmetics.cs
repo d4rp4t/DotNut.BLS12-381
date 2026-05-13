@@ -2,6 +2,11 @@ namespace DotNut.BLS12_381;
 
 public readonly partial struct Scalar
 {
+    /// <summary>
+    /// Returns bit <paramref name="i"/> (0-indexed, LSB = 0) of the scalar's canonical value.
+    /// Converts to canonical form first, then extracts the bit from the appropriate limb.
+    /// </summary>
+    /// <returns>0 or 1 as a <see cref="ulong"/>.</returns>
     public ulong GetBit(int i)
     {
         var c = ToCanonical(this);
@@ -9,6 +14,10 @@ public readonly partial struct Scalar
         return (limb >> (i & 63)) & 1UL;
     }
 
+    /// <summary>
+    /// Returns a + b in Fr. Adds the raw limbs, then conditionally subtracts r to keep the result in [0, r).
+    /// Inputs must be in Montgomery form (i.e. both are valid scalar field elements).
+    /// </summary>
     public static Scalar Add(Scalar a, Scalar b)
     {
         Scalar r = AddUnchecked(a, b, out ulong carry);
@@ -17,6 +26,10 @@ public readonly partial struct Scalar
         return Select(shouldSubtract, rMinusP, r);
     }
 
+    /// <summary>
+    /// Returns a − b in Fr. Subtracts the raw limbs, then conditionally adds r on underflow.
+    /// Inputs must be in Montgomery form.
+    /// </summary>
     public static Scalar Sub(Scalar a, Scalar b)
     {
         Scalar r = SubUnchecked(a, b, out ulong borrow);
@@ -24,16 +37,33 @@ public readonly partial struct Scalar
         return Select(borrow, rPlusP, r);
     }
 
+    /// <summary>
+    /// Returns a · b in Fr using Montgomery multiplication: MontgomeryReduce(a_limbs · b_limbs).
+    /// Both inputs must be in Montgomery form.
+    /// </summary>
     public static Scalar Mul(Scalar a, Scalar b) => MontgomeryReduce(MultiplyWide(a, b));
 
+    /// <summary>
+    /// Returns a² in Fr using Montgomery multiplication applied to the wide square.
+    /// Input must be in Montgomery form.
+    /// </summary>
     public static Scalar Square(Scalar a) => MontgomeryReduce(SquareWide(a));
 
+    /// <summary>
+    /// Returns −a in Fr. Returns zero if a is zero (branchless).
+    /// Input must be in Montgomery form.
+    /// </summary>
     public static Scalar Negate(Scalar a)
     {
         Scalar neg = SubUnchecked(GroupOrderR, a, out _);
         return Select(IsZeroMask(a), Zero, neg);
     }
 
+    /// <summary>
+    /// Returns a⁻¹ in Fr using Fermat's little theorem: a^(r−2) mod r.
+    /// Implemented as a constant-time square-and-multiply over a fixed 256-bit exponent.
+    /// </summary>
+    /// <exception cref="DivideByZeroException">Thrown if <paramref name="a"/> is zero.</exception>
     public static Scalar Invert(Scalar a)
     {
         if (IsZero(a))
@@ -62,11 +92,25 @@ public readonly partial struct Scalar
         return result;
     }
 
+    /// <summary>
+    /// Converts an integer a in [0, r) to Montgomery form by computing MontgomeryReduce(a · R²) = a·R mod r.
+    /// Input raw limbs must represent a canonical integer in [0, r); they are NOT already in Montgomery form.
+    /// </summary>
     internal static Scalar FromCanonical(Scalar a) => MontgomeryReduce(MultiplyWide(a, R2));
 
+    /// <summary>
+    /// Converts a scalar from Montgomery form back to its canonical integer in [0, r).
+    /// Computes MontgomeryReduce([a_limbs, 0, 0, 0, 0]) = a·R⁻¹ mod r.
+    /// Result raw limbs represent the canonical integer, NOT in Montgomery form.
+    /// </summary>
     internal static Scalar ToCanonical(Scalar a) =>
         MontgomeryReduce([a.L0, a.L1, a.L2, a.L3, 0UL, 0UL, 0UL, 0UL]);
 
+    /// <summary>
+    /// Computes the 512-bit product of <paramref name="a"/> × <paramref name="a"/> using the
+    /// Comba squaring method. Exploits symmetry: off-diagonal terms are computed once then doubled.
+    /// Returns 8 limbs in little-endian order. Does not perform any modular reduction.
+    /// </summary>
     private static ulong[] SquareWide(Scalar a)
     {
         ulong carry;
@@ -101,6 +145,10 @@ public readonly partial struct Scalar
         return [r0, r1, r2, r3, r4, r5, r6, r7];
     }
 
+    /// <summary>
+    /// Computes the 512-bit schoolbook product <paramref name="a"/> × <paramref name="b"/>.
+    /// Returns 8 limbs in little-endian order. Does not perform any modular reduction.
+    /// </summary>
     private static ulong[] MultiplyWide(Scalar a, Scalar b)
     {
         var t = new ulong[8];
@@ -116,6 +164,11 @@ public readonly partial struct Scalar
         return t;
     }
 
+    /// <summary>
+    /// Performs Montgomery reduction on the 512-bit value <paramref name="t8"/>.
+    /// Computes t · R⁻¹ mod r and returns the result in [0, r).
+    /// Uses MontgomeryInv = −r⁻¹ mod 2^64.
+    /// </summary>
     private static Scalar MontgomeryReduce(ulong[] t8)
     {
         ulong[] t = [t8[0], t8[1], t8[2], t8[3], t8[4], t8[5], t8[6], t8[7], 0UL];
@@ -143,6 +196,11 @@ public readonly partial struct Scalar
         return Select(borrow ^ 1UL, rMinusM, r);
     }
 
+    /// <summary>
+    /// Branchless conditional select: returns <paramref name="whenOne"/> if <paramref name="bit"/> = 1,
+    /// <paramref name="whenZero"/> if <paramref name="bit"/> = 0.
+    /// Does not perform any field arithmetic.
+    /// </summary>
     private static Scalar Select(ulong bit, Scalar whenOne, Scalar whenZero)
     {
         ulong mask = 0UL - bit;
@@ -154,6 +212,10 @@ public readonly partial struct Scalar
         );
     }
 
+    /// <summary>
+    /// Adds the raw limbs of a and b, propagating carries. Does NOT reduce modulo r.
+    /// Sets <paramref name="carry"/> to 1 if the result overflowed 256 bits.
+    /// </summary>
     private static Scalar AddUnchecked(Scalar a, Scalar b, out ulong carry)
     {
         ulong c = 0;
@@ -164,6 +226,10 @@ public readonly partial struct Scalar
         return new Scalar(l0, l1, l2, l3);
     }
 
+    /// <summary>
+    /// Subtracts the raw limbs of b from a, propagating borrows. Does NOT reduce modulo r.
+    /// Sets <paramref name="borrow"/> to 1 if the result underflowed.
+    /// </summary>
     private static Scalar SubUnchecked(Scalar a, Scalar b, out ulong borrow)
     {
         ulong brrw = 0;
@@ -174,6 +240,10 @@ public readonly partial struct Scalar
         return new Scalar(l0, l1, l2, l3);
     }
 
+    /// <summary>
+    /// Returns an all-ones mask (0xFFFFFFFFFFFFFFFF) if <paramref name="a"/> is zero, or 0 otherwise.
+    /// Operates on raw limbs; does not perform any field conversion.
+    /// </summary>
     private static ulong IsZeroMask(Scalar a)
     {
         ulong x = a.L0 | a.L1 | a.L2 | a.L3;

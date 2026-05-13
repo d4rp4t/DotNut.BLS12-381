@@ -2,8 +2,21 @@ using DotNut.BLS12_381.Tower;
 
 namespace DotNut.BLS12_381.HashToCurve;
 
+/// <summary>
+/// Addition-chain exponentiation helpers for the BLS12-381 base field and its degree-2 extension.
+/// These methods are generated optimal addition chains that avoid general-purpose square-and-multiply loops.
+/// </summary>
 public static class AdditionChains
 {
+    /// <summary>
+    /// Computes var0^((p − 3) / 4) in Fp using a hand-optimized addition chain.
+    /// This exponent arises in the Fp square root algorithm: if x is a quadratic residue,
+    /// then x^((p−3)/4) = x^(−1/4) and x^((p+1)/4) = sqrt(x).
+    /// Used internally by <see cref="DotNut.BLS12_381.Tower.Fp.TrySqrt"/>.
+    /// Input must be in Montgomery form (i.e. in [0, p)).
+    /// </summary>
+    /// <param name="var0">Field element in Montgomery form.</param>
+    /// <returns>var0^((p−3)/4) in Montgomery form.</returns>
     public static Fp Pm3Div4(Fp var0)
     {
         // 0 : 2 
@@ -308,6 +321,16 @@ public static class AdditionChains
         return Fp.Square(var1);
     }
     
+    /// <summary>
+    /// Computes var0^((p² − 9) / 16) in Fp2 using a hand-optimized addition chain.
+    /// This exponent arises in the Fp2 square root algorithm (Algorithm 9 from
+    /// https://eprint.iacr.org/2012/685.pdf): the exponent a1 = value^((p−3)/4) is computed
+    /// in Fp2, which requires raising to (p²−9)/16 in the degree-2 extension.
+    /// Used internally by <see cref="DotNut.BLS12_381.Tower.Fp2.TrySqrt"/>.
+    /// Input must be in Montgomery form.
+    /// </summary>
+    /// <param name="var0">Fp2 element in Montgomery form.</param>
+    /// <returns>var0^((p²−9)/16) in Montgomery form.</returns>
     public static Fp2 P2M9Div16(Fp2 var0) { 
         //    0 : 2  
         Fp2 var1 = Fp2.Square(var0); 
@@ -845,6 +868,10 @@ public static class AdditionChains
         return Fp2.Multiply(var1, var2);
     }
     
+    /// <summary>
+    /// Applies <see cref="DotNut.BLS12_381.Tower.Fp.Square"/> <paramref name="n"/> times to <paramref name="x"/>.
+    /// Used as a building block in the addition chain sequences.
+    /// </summary>
     private static Fp SquareN(Fp x, int n)
     {
         for (int i = 0; i < n; i++)
@@ -855,6 +882,10 @@ public static class AdditionChains
         return x;
     }
 
+    /// <summary>
+    /// Applies <see cref="DotNut.BLS12_381.Tower.Fp2.Square"/> <paramref name="n"/> times to <paramref name="x"/>.
+    /// Used as a building block in the addition chain sequences.
+    /// </summary>
     private static Fp2 SquareN(Fp2 x, int n)
     {
         for (int i = 0; i < n; i++)

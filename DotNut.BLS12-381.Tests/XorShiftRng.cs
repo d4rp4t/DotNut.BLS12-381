@@ -1,4 +1,4 @@
-namespace DotNut.BLS12_381;
+namespace DotNut.BLS12_381.Tests;
 
 public ref struct XorShiftRng
 {

@@ -4,14 +4,36 @@ using DotNut.BLS12_381.Tower;
 
 namespace DotNut.BLS12_381.Pairing;
 
+/// <summary>
+/// BLS12-381 optimal Ate pairing e: G1 × G2 → GT.
+/// Implements the Miller loop using the BLS seed x = 0xd201000000010000 (negative)
+/// and the Beuchat-et-al. final exponentiation.
+/// </summary>
 public static class Bls12Pairing
 {
     // BLS_X = 0xd201000000010000 (negative parameter for BLS12-381)
     // BLS_X >> 1 — used as the binary Miller loop scalar
     private const ulong BlsXHalf = 0x6900800000008000UL;
 
+    /// <summary>
+    /// Computes the full BLS12-381 pairing e(P, Q) = MillerLoop(P, Q).FinalExponentiation().
+    /// Both inputs must be in the correct prime-order subgroup.
+    /// Returns the identity element of GT if either input is the point at infinity.
+    /// </summary>
+    /// <param name="p">G1 point; must be in the G1 prime-order subgroup.</param>
+    /// <param name="q">G2 point; must be in the G2 prime-order subgroup.</param>
     public static Gt Pair(G1Affine p, G2Affine q) => MillerLoop(p, q).FinalExponentiation();
 
+    /// <summary>
+    /// Runs the optimal Ate Miller loop for a single (P, Q) pair.
+    /// Iterates over the bits of BLS_X/2 (MSB to LSB) performing doubling and conditional addition steps.
+    /// At the end the result is conjugated because BLS_X is negative.
+    /// Does NOT apply the final exponentiation; call <see cref="MillerLoopResult.FinalExponentiation"/> on the result.
+    /// </summary>
+    /// <param name="p">G1 affine point; must be in the correct subgroup. Returns default if infinity.</param>
+    /// <param name="q">G2 affine point; must be in the correct subgroup. Returns default if infinity.</param>
+    /// <returns>Raw Miller loop Fp12 value wrapped in <see cref="MillerLoopResult"/>.</returns>
+    /// <exception cref="ArgumentException">Thrown if either point is not in the correct prime-order subgroup.</exception>
     public static MillerLoopResult MillerLoop(G1Affine p, G2Affine q)
     {
         if (p.IsInfinity || q.IsInfinity) return MillerLoopResult.Default;
@@ -39,6 +61,16 @@ public static class Bls12Pairing
         return new MillerLoopResult(Fp12.Conjugate(f));
     }
 
+    /// <summary>
+    /// Runs the optimal Ate Miller loop for multiple (P_i, Q_i) pairs simultaneously,
+    /// accumulating line evaluations into a single Fp12 product.
+    /// More efficient than calling <see cref="MillerLoop"/> separately for each pair
+    /// because the squarings are shared.
+    /// Q values should be precomputed via <see cref="G2Prepared.From"/> to avoid redundant G2 steps.
+    /// Does NOT apply final exponentiation.
+    /// </summary>
+    /// <param name="terms">Pairs of (G1 point, precomputed G2 coefficients).</param>
+    /// <returns>Accumulated Miller loop result; call <see cref="MillerLoopResult.FinalExponentiation"/> to get GT.</returns>
     public static MillerLoopResult MultiMillerLoop(IEnumerable<(G1Affine P, G2Prepared Q)> terms)
     {
         var termList = terms.ToList();
@@ -74,6 +106,12 @@ public static class Bls12Pairing
         return new MillerLoopResult(Fp12.Conjugate(f));
     }
 
+    /// <summary>
+    /// Runs the full G2 Miller loop preprocessing for <paramref name="q"/> and stores the 68 coefficient triples
+    /// needed by <see cref="MultiMillerLoop"/>.
+    /// If <paramref name="q"/> is infinity, the generator is used as a stand-in for valid arithmetic,
+    /// and the <see cref="G2Prepared.IsInfinity"/> flag is set so that <see cref="MultiMillerLoop"/> skips it.
+    /// </summary>
     internal static G2Prepared BuildG2Prepared(G2Affine q)
     {
         var isInfinity = q.IsInfinity;
@@ -101,7 +139,10 @@ public static class Bls12Pairing
         return new G2Prepared(isInfinity, coeffs);
     }
 
-    // Algorithm 26, https://eprint.iacr.org/2010/354.pdf
+    /// <summary>
+    /// Performs one Miller loop doubling step (Algorithm 26 from https://eprint.iacr.org/2010/354.pdf).
+    /// Updates the running G2 projective accumulator (rx, ry, rz) in place and returns the line coefficients (c0, c1, c2).
+    /// </summary>
     private static (Fp2 c0, Fp2 c1, Fp2 c2) DoublingStep(ref Fp2 rx, ref Fp2 ry, ref Fp2 rz)
     {
         var tmp0 = Fp2.Square(rx);
@@ -135,7 +176,15 @@ public static class Bls12Pairing
         return (c0, c1, c2);
     }
 
-    // Algorithm 27, https://eprint.iacr.org/2010/354.pdf
+    /// <summary>
+    /// Performs one Miller loop addition step (Algorithm 27 from https://eprint.iacr.org/2010/354.pdf).
+    /// Updates the running G2 projective accumulator (rx, ry, rz) in place and returns the line coefficients (c0, c1, c2).
+    /// </summary>
+    /// <param name="rx">Running accumulator X (projective, modified in place).</param>
+    /// <param name="ry">Running accumulator Y (projective, modified in place).</param>
+    /// <param name="rz">Running accumulator Z (projective, modified in place).</param>
+    /// <param name="qx">X coordinate of the fixed G2 affine point.</param>
+    /// <param name="qy">Y coordinate of the fixed G2 affine point.</param>
     private static (Fp2 c0, Fp2 c1, Fp2 c2) AdditionStep(ref Fp2 rx, ref Fp2 ry, ref Fp2 rz, Fp2 qx, Fp2 qy)
     {
         var zSq = Fp2.Square(rz);
@@ -173,8 +222,14 @@ public static class Bls12Pairing
         return (c0, c1, t9);
     }
 
-    // Maps precomputed (c0,c1,c2) line coefficients + G1 point into Fp12 line-evaluation.
-    // c0 is scaled by py, c1 by px; c2 is the unscaled ell_0 term.
+    /// <summary>
+    /// Applies the precomputed line evaluation coefficients (c0, c1, c2) to the current Miller loop accumulator f,
+    /// scaling c0 by the G1 Y coordinate and c1 by the G1 X coordinate, then calling <see cref="Fp12.MulBy014"/>.
+    /// </summary>
+    /// <param name="f">Current Miller loop Fp12 accumulator.</param>
+    /// <param name="coeffs">Line coefficient triple from a doubling or addition step.</param>
+    /// <param name="px">X coordinate of the G1 affine point (scales c1).</param>
+    /// <param name="py">Y coordinate of the G1 affine point (scales c0).</param>
     private static Fp12 Ell(Fp12 f, (Fp2 c0, Fp2 c1, Fp2 c2) coeffs, Fp px, Fp py)
     {
         var ell4 = MulByFp(coeffs.c0, py);
@@ -182,6 +237,10 @@ public static class Bls12Pairing
         return Fp12.MulBy014(f, coeffs.c2, ell1, ell4);
     }
 
+    /// <summary>
+    /// Scales an Fp2 element by an Fp scalar (component-wise multiplication).
+    /// Used to fold G1 coordinates into the line evaluation coefficients.
+    /// </summary>
     private static Fp2 MulByFp(Fp2 value, Fp scalar)
         => new(Fp.Multiply(value.C0, scalar), Fp.Multiply(value.C1, scalar));
 }

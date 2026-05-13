@@ -2,16 +2,33 @@ using DotNut.BLS12_381.Tower;
 
 namespace DotNut.BLS12_381.Curve.G1;
 
+/// <summary>
+/// A point on the BLS12-381 G1 curve in projective (Jacobian) coordinates (X : Y : Z) over Fp.
+/// The affine point (x, y) is represented as (X = x·Z², Y = y·Z³, Z ≠ 0).
+/// The point at infinity is represented by Z = 0.
+/// </summary>
 public readonly struct G1Projective(Fp x, Fp y, Fp z)
 {
+    /// <summary>Projective X coordinate in Montgomery form.</summary>
     public Fp X { get; } = x;
+
+    /// <summary>Projective Y coordinate in Montgomery form.</summary>
     public Fp Y { get; } = y;
+
+    /// <summary>Projective Z coordinate in Montgomery form.</summary>
     public Fp Z { get; } = z;
 
+    /// <summary>The point at infinity (Z = 0).</summary>
     public static readonly G1Projective Infinity = new(Fp.Zero, Fp.One, Fp.Zero);
 
+    /// <summary>Returns <see langword="true"/> if Z = 0 (this is the point at infinity).</summary>
     public bool IsInfinity => Fp.Equal(Z, Fp.Zero);
 
+    /// <summary>
+    /// Returns P + Q using the EFD add-2007-bl formula for short Weierstrass curves in Jacobian coordinates.
+    /// Handles the infinity case explicitly; degenerate cases (P = Q or P = −Q) are handled via <see cref="Double"/>.
+    /// Both inputs must have all coordinates in Montgomery form.
+    /// </summary>
     public static G1Projective Add(G1Projective p, G1Projective q)
     {
         if (p.IsInfinity) return q;
@@ -40,6 +57,12 @@ public readonly struct G1Projective(Fp x, Fp y, Fp z)
         return new G1Projective(x3, y3, z3);
     }
 
+    /// <summary>
+    /// Returns 2·P using the EFD dbl-2009-l formula for a = 0 Weierstrass curves in Jacobian coordinates.
+    /// Returns infinity if P is the point at infinity or if Y = 0 (a point of order 2, impossible in G1
+    /// since r is prime and r > 2, but guarded defensively).
+    /// Input must have all coordinates in Montgomery form.
+    /// </summary>
     public static G1Projective Double(G1Projective p)
     {
         if (p.IsInfinity || Fp.Equal(p.Y, Fp.Zero)) return Infinity;
@@ -57,6 +80,15 @@ public readonly struct G1Projective(Fp x, Fp y, Fp z)
         return new G1Projective(x3, y3, z3);
     }
 
+    /// <summary>
+    /// Computes [k]P using the Montgomery ladder scalar multiplication algorithm.
+    /// Processes 255 bits of the scalar (bits 254 down to 0); the scalar must fit in 255 bits
+    /// (all scalars in [0, r) satisfy this since r &lt; 2^255).
+    /// The algorithm is constant-time with respect to the scalar.
+    /// </summary>
+    /// <param name="p">The base point. Must have coordinates in Montgomery form.</param>
+    /// <param name="k">The scalar multiplier (in Montgomery form internally).</param>
+    /// <returns>[k]P in projective coordinates.</returns>
     public static G1Projective ScalarMultiply(G1Projective p, Scalar k)
     {
         var r0 = Infinity;
@@ -74,6 +106,11 @@ public readonly struct G1Projective(Fp x, Fp y, Fp z)
         return r0;
     }
 
+    /// <summary>
+    /// Branchless conditional swap of two projective points.
+    /// When <paramref name="bit"/> = 1, swaps a and b; when 0, leaves them unchanged.
+    /// Operates on raw limbs without field arithmetic.
+    /// </summary>
     private static (G1Projective, G1Projective) CtSwap(ulong bit, G1Projective a, G1Projective b)
     {
         ulong mask = 0UL - bit;
@@ -83,6 +120,11 @@ public readonly struct G1Projective(Fp x, Fp y, Fp z)
         );
     }
 
+    /// <summary>
+    /// Branchless conditional select of an Fp element.
+    /// Returns x if mask is all-ones (0xFFFF...), y if mask is zero.
+    /// Does not perform Montgomery reduction.
+    /// </summary>
     private static Fp CtSelect(ulong mask, Fp x, Fp y) => new(
         (x.L0 & mask) | (y.L0 & ~mask),
         (x.L1 & mask) | (y.L1 & ~mask),
@@ -92,6 +134,10 @@ public readonly struct G1Projective(Fp x, Fp y, Fp z)
         (x.L5 & mask) | (y.L5 & ~mask)
     );
 
+    /// <summary>
+    /// Converts this projective point to affine form by computing (X/Z², Y/Z³).
+    /// Returns <see cref="G1Affine.Infinity"/> if this is the point at infinity.
+    /// </summary>
     public G1Affine ToAffine()
     {
         if (IsInfinity) return G1Affine.Infinity;
@@ -101,12 +147,20 @@ public readonly struct G1Projective(Fp x, Fp y, Fp z)
         return new G1Affine(Fp.Multiply(X, z2), Fp.Multiply(Y, z3));
     }
 
+    /// <summary>Converts to affine and checks the curve equation. See <see cref="G1Affine.IsOnCurve"/>.</summary>
     public bool IsOnCurve() => ToAffine().IsOnCurve();
 
-    // h1 = 0xd201000000010001 = 1 + BLS_X; clears the E1(Fp) cofactor so the result is in G1.
+    /// <summary>
+    /// Clears the E1(Fp) cofactor h1 = 1 + BLS_X so that the result is in the G1 prime-order subgroup.
+    /// Uses h1 = 1 + BLS_X = 0xd201000000010001; computes [h1]P = P + [BLS_X]P.
+    /// </summary>
     public G1Projective ClearCofactor() => Add(this, MulByBLSX(this));
 
-    // [BLS_X]P via left-to-right binary double-and-add (BLS_X = 0xd201000000010000, 6 set bits).
+    /// <summary>
+    /// Computes [BLS_X]P via left-to-right binary double-and-add.
+    /// BLS_X = 0xd201000000010000 (6 set bits; 64-bit scalar).
+    /// Used by <see cref="ClearCofactor"/> and the G2 subgroup check.
+    /// </summary>
     internal static G1Projective MulByBLSX(G1Projective p)
     {
         const ulong BlsX = 0xd201_0000_0001_0000UL;
@@ -125,7 +179,12 @@ public readonly struct G1Projective(Fp x, Fp y, Fp z)
         return acc;
     }
 
+    /// <summary>Returns 2·v as an Fp element via addition (no Montgomery overhead vs. a literal 2×).</summary>
     private static Fp DoubleFp(Fp v) => Fp.Add(v, v);
+
+    /// <summary>Returns 3·v as an Fp element.</summary>
     private static Fp TripleFp(Fp v) => Fp.Add(v, DoubleFp(v));
+
+    /// <summary>Returns 8·v as an Fp element via three doublings.</summary>
     private static Fp EightFp(Fp v) => DoubleFp(DoubleFp(DoubleFp(v)));
 }
