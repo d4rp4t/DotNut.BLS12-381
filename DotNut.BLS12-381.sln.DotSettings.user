@@ -1,0 +1,35 @@
+﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=24d322cd_002D4f47_002D432a_002D8e74_002D352b30fecbfd/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="ToBytes_And_FromBytes_BigEndian_RoundTrip" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
+  &lt;TestAncestor&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.Test1&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.TowerFieldTests&lt;/TestId&gt;
+  &lt;/TestAncestor&gt;
+&lt;/SessionState&gt;</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=3d69d286_002Dc4fd_002D4562_002Dba5c_002D469fb2955a17/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="TestFpChain" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
+  &lt;TestAncestor&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.AdditionChainTests.TestFpChain&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.AdditionChainTests.Diddy&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.SerializationTests&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.AdditionChainTests.Epstein&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.ZkCryptoVectors.FpTests&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.ZkCryptoVectors.Fp2Tests&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.ZkCryptoVectors.Fp6Tests.test_arithmetic&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.ZkCryptoVectors.Fp12Tests&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.AdditionChainTests.TestFp2Chain&lt;/TestId&gt;
+  &lt;/TestAncestor&gt;
+&lt;/SessionState&gt;</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=66e4f1a6_002D0468_002D4373_002D9ebe_002D0986c2d95eb4/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="Fp12_CyclotomicExp_ShouldMatchPow_ForCyclotomicElements" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
+  &lt;TestAncestor&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.TowerFieldTests.Fp12_CyclotomicExp_ShouldMatchPow_ForCyclotomicElements&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.AdditionChainTests&lt;/TestId&gt;
+  &lt;/TestAncestor&gt;
+&lt;/SessionState&gt;</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=f9c8bf8b_002Dcaa9_002D4923_002D895c_002Db78198961544/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="Test1" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
+  &lt;TestAncestor&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.Test1&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.TowerFieldTests.Fp12_FrobeniusMap_ShouldBeCompositional&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.TowerFieldTests.Fp12_CyclotomicExp_ShouldMatchPow_ForCyclotomicElements&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.TowerFieldTests&lt;/TestId&gt;
+    &lt;TestId&gt;xUnit::276BD08D-0B3B-44E9-91B4-EC9754B87EF0::net8.0::DotNut.BLS12_381.Tests.AdditionChainTests.TestFpChain&lt;/TestId&gt;
+  &lt;/TestAncestor&gt;
+&lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>
