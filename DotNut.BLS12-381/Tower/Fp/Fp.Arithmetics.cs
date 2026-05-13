@@ -1,7 +1,14 @@
+using System.Runtime.CompilerServices;
+
 namespace DotNut.BLS12_381.Tower;
 
 public readonly partial struct Fp
 {
+
+    /// <summary>
+    /// Computes <c>(a + b) mod p</c>.
+    /// </summary>
+    /// <returns>The sum reduced modulo the field modulus.</returns>
     public static Fp Add(Fp a, Fp b)
     {
         Fp r = AddUnchecked(a, b, out ulong carry);
@@ -10,6 +17,10 @@ public readonly partial struct Fp
         return Select(shouldSubtract, rMinusP, r);
     }
 
+    /// <summary>
+    /// Computes <c>(a - b) mod p</c>.
+    /// </summary>
+    /// <returns>The difference reduced modulo the field modulus.</returns>
     public static Fp Subtract(Fp a, Fp b)
     {
         Fp r = SubtractUnchecked(a, b, out ulong borrow);
@@ -17,10 +28,22 @@ public readonly partial struct Fp
         return Select(borrow, rPlusP, r);
     }
 
+    /// <summary>
+    /// Computes <c>(a × b) mod p</c>.
+    /// </summary>
+    /// <remarks>
+    /// Both operands are assumed to be in Montgomery form.
+    /// </remarks>
     public static Fp Multiply(Fp a, Fp b) => MontgomeryReduce(MultiplyWide(a, b));
 
+    /// <summary>
+    /// Computes <c>a^2 mod p</c>.
+    /// </summary>
     public static Fp Square(Fp a) => MontgomeryReduce(SquareWide(a));
 
+    /// <summary>
+    /// Computes the additive inverse <c>(-value) mod p</c>.
+    /// </summary>
     public static Fp Negate(Fp value)
     {
         Fp neg = SubtractUnchecked(Modulus, value, out _);
@@ -28,6 +51,18 @@ public readonly partial struct Fp
         return Select(isZero, Zero, neg);
     }
 
+    /// <summary>
+    /// Computes the multiplicative inverse of <paramref name="value"/>.
+    /// </summary>
+    /// <returns>
+    /// <c>value^-1 mod p</c>.
+    /// </returns>
+    /// <exception cref="DivideByZeroException">
+    /// Thrown when <paramref name="value"/> is zero.
+    /// </exception>
+    /// <remarks>
+    /// Uses exponentiation by <c>p - 2</c> (Fermat's little theorem).
+    /// </remarks>
     public static Fp Invert(Fp value)
     {
         if (Equal(value, Zero))
@@ -62,10 +97,20 @@ public readonly partial struct Fp
         return result;
     }
 
+    /// <summary>
+    /// Converts a canonical field element into Montgomery form.
+    /// </summary>
     internal static Fp FromCanonical(Fp canonical) => MontgomeryReduce(MultiplyWide(canonical, MontgomeryR2));
 
+    /// <summary>
+    /// Converts a Montgomery-form element into canonical representation.
+    /// </summary>
     internal static Fp ToCanonical(Fp montgomery) => MontgomeryReduce(MultiplyWide(montgomery, RawOne));
-
+    
+    /// <summary>
+    /// Adds two limbs without modular reduction.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static Fp AddUnchecked(Fp a, Fp b, out ulong carry)
     {
         ulong c = 0;
@@ -78,6 +123,10 @@ public readonly partial struct Fp
         return new Fp(l0, l1, l2, l3, l4, l5);
     }
 
+    /// <summary>
+    /// Subtracts two limbs without modular reduction.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static Fp SubtractUnchecked(Fp a, Fp b, out ulong borrow)
     {
         ulong brrw = 0;
@@ -92,6 +141,9 @@ public readonly partial struct Fp
     
     internal static ulong[] SquareWide(Fp a) => MultiplyWide(a, a);
 
+    /// <summary>
+    /// Computes the full 768-bit product before Montgomery reduction.
+    /// </summary>
     internal static ulong[] MultiplyWide(Fp a, Fp b)
     {
         var t = new ulong[12];
@@ -109,6 +161,9 @@ public readonly partial struct Fp
         return t;
     }
     
+    /// <summary>
+    /// Performs Montgomery reduction on a 768-bit intermediate product.
+    /// </summary>
     private static Fp MontgomeryReduce(ulong[] t12)
     {
         ulong[] t = [t12[0], t12[1], t12[2], t12[3], t12[4], t12[5], t12[6], t12[7], t12[8], t12[9], t12[10], t12[11], 0UL];
@@ -141,7 +196,11 @@ public readonly partial struct Fp
         return Select(shouldSubtract, rMinusP, r);
     }
 
-    private static Fp Select(ulong bit, Fp whenOne, Fp whenZero)
+    /// <summary>
+    /// "Constant-time" conditional selection.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static Fp Select(ulong bit, Fp whenOne, Fp whenZero)
     {
         ulong mask = 0UL - bit;
         return new Fp(
@@ -154,6 +213,10 @@ public readonly partial struct Fp
         );
     }
     
+    /// <summary>
+    /// Returns 1 if the value is zero; otherwise 0. Duh
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static ulong IsZeroMask(Fp value)
     {
         ulong x = value.L0 | value.L1 | value.L2 | value.L3 | value.L4 | value.L5;

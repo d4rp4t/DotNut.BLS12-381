@@ -4,6 +4,7 @@ namespace DotNut.BLS12_381;
 
 internal static class CommonMath
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ulong AddCarry(ulong a, ulong b, ulong carryIn, out ulong carryOut)
     {
         UInt128 sum = (UInt128)a + b + carryIn;
@@ -11,6 +12,7 @@ internal static class CommonMath
         return (ulong)sum;
     }
     
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ulong SubBorrow(ulong a, ulong b, ulong borrowIn, out ulong borrowOut)
     {
         UInt128 diff = (UInt128)a - b - borrowIn;
@@ -18,6 +20,7 @@ internal static class CommonMath
         return (ulong)diff;
     }
     
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ulong Mac(ulong a, ulong b, ulong t, ulong c, out ulong carry)
     {
         UInt128 r = (UInt128)a * b + t + c;
@@ -25,6 +28,7 @@ internal static class CommonMath
         return (ulong)r;
     }
     
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ulong SelectU64(ulong mask, ulong whenMaskAllOnes, ulong whenMaskZero)
     {
         return (whenMaskAllOnes & mask) | (whenMaskZero & ~mask);

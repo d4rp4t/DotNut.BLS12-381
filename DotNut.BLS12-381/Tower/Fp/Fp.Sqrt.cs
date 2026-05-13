@@ -2,8 +2,19 @@ namespace DotNut.BLS12_381.Tower;
 
 public readonly partial struct Fp
 {
-    // Returns true if this element is strictly lexicographically larger than its negation,
-    // i.e., value > (p-1)/2. Used for compressed point serialization.
+    /// <summary>
+    /// Determines whether the element is lexicographically larger than (p-1)/2.
+    /// </summary>
+    /// <remarks>
+    /// This is used in elliptic curve point compression to encode the sign bit
+    /// of the x-coordinate.
+    ///
+    /// The check is performed on the canonical representation of the field element.
+    /// </remarks>
+    /// <param name="value">Field element in Montgomery form.</param>
+    /// <returns>
+    /// True if value &gt; (p-1)/2, otherwise false.
+    /// </returns>
     public static bool LexicographicallyLargest(Fp value)
     {
         // Subtract (p+1)/2 from the canonical value. If no underflow (borrow == 0),
@@ -20,8 +31,27 @@ public readonly partial struct Fp
         return borrow == 0;
     }
 
-    // sqrt via Shank's method: p == 3 (mod 4) so sqrt(a) = a^((p+1)/4).
-    // Returns true if value is a quadratic residue; sqrt is undefined otherwise.
+    /// <summary>
+    /// Computes a square root of the field element if it exists.
+    /// </summary>
+    /// <remarks>
+    /// Implements the exponentiation method for fields where p ≡ 3 (mod 4):
+    /// sqrt(a) = a^((p+1)/4).
+    ///
+    /// The result is not guaranteed to be a canonical representative
+    /// (both r and -r are valid square roots).
+    ///
+    /// Verification is performed by checking:
+    /// Square(sqrt) == value
+    /// </remarks>
+    /// <param name="value">Field element in Montgomery form.</param>
+    /// <param name="sqrt">
+    /// If the function returns true, contains a valid square root of <paramref name="value"/>.
+    /// Otherwise contains an undefined value.
+    /// </param>
+    /// <returns>
+    /// True if the input is a quadratic residue in Fp, otherwise false.
+    /// </returns>
     public static bool TrySqrt(Fp value, out Fp sqrt)
     {
         sqrt = PowVartime(value, [
@@ -35,8 +65,23 @@ public readonly partial struct Fp
         return Equal(Square(sqrt), value);
     }
 
-    // Square-and-multiply with fixed exponent given as 6 LE limbs (expLE[0] = LSB, expLE[5] = MSB).
-    // Variable-time w.r.t. the exponent only — safe for public, non-secret exponents.
+    /// <summary>
+    /// Computes exponentiation using square-and-multiply in Montgomery form.
+    /// </summary>
+    /// <remarks>
+    /// The exponent is provided in little-endian 64-bit limbs
+    /// (expLE[0] is the least significant limb).
+    ///
+    /// This implementation is variable-time with respect to the exponent
+    /// only and is safe when the exponent is public.
+    ///
+    /// WARNING: This is NOT constant-time with respect to the base value.
+    /// </remarks>
+    /// <param name="value">Base element in Montgomery form.</param>
+    /// <param name="expLE">
+    /// Exponent represented as 6 little-endian 64-bit limbs.
+    /// </param>
+    /// <returns>value raised to the given exponent in Fp.</returns>
     internal static Fp PowVartime(Fp value, ReadOnlySpan<ulong> expLE)
     {
         var result = One;
