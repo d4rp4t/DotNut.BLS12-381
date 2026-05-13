@@ -13,7 +13,15 @@ public readonly partial struct Fp2
         if (c1 != 0) return c1;
         return Fp.Compare(a.C0, b.C0);
     }
-
+    
+    /// <summary>
+    /// Constant-time equality. Returns 1 if <paramref name="a"/> and <paramref name="b"/>
+    /// represent the same Fp2 element (raw limb comparison), 0 otherwise.
+    /// Both inputs must be in reduced Montgomery form.
+    /// </summary>
+    internal static ulong CtEqual(Fp2 a, Fp2 b)
+        => Fp.CtEqual(a.C0, b.C0) & Fp.CtEqual(a.C1, b.C1);
+    
     /// <summary>
     /// Returns <see langword="true"/> if a and b represent the same element of Fp2.
     /// Delegates to <see cref="Fp.Equal"/> for each component, which compares raw Montgomery-form limbs.

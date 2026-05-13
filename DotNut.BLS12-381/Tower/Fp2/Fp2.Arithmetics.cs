@@ -131,4 +131,34 @@ public readonly partial struct Fp2
         }
         return result;
     }
+
+    /// <summary>
+    /// Constant-time conditional selection. Returns <paramref name="whenOne"/> when
+    /// <paramref name="bit"/> is 1, <paramref name="whenZero"/> when 0.
+    /// Delegates component-wise to <see cref="Fp.Select"/>.
+    /// </summary>
+    internal static Fp2 Select(ulong bit, Fp2 whenOne, Fp2 whenZero)
+        => new(Fp.Select(bit, whenOne.C0, whenZero.C0),
+               Fp.Select(bit, whenOne.C1, whenZero.C1));
+
+    /// <summary>
+    /// Returns 1 if both components are zero, 0 otherwise.
+    /// Operates on raw Montgomery limbs without canonicalizing.
+    /// </summary>
+    internal static ulong IsZeroMask(Fp2 value)
+        => Fp.IsZeroMask(value.C0) & Fp.IsZeroMask(value.C1);
+    
+
+    /// <summary>
+    /// Sign function for Fp2 as defined in RFC 9380 §4.1:
+    /// <c>sgn0(a + b·u) = sgn0(a)</c> if a ≠ 0, else <c>sgn0(b)</c>.
+    /// Returns 1 if the element is "negative", 0 if "non-negative".
+    /// </summary>
+    internal static ulong Sgn0(Fp2 value)
+    {
+        var sign0  = Fp.Sgn0(value.C0);
+        var zero0  = Fp.IsZeroMask(value.C0);
+        var sign1  = Fp.Sgn0(value.C1);
+        return sign0 | (zero0 & sign1);
+    }
 }

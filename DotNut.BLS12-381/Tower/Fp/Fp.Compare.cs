@@ -1,6 +1,3 @@
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-
 namespace DotNut.BLS12_381.Tower;
 
 public readonly partial struct Fp
@@ -23,12 +20,7 @@ public readonly partial struct Fp
         return (int)gt - (int)lt;
     }
 
-    public static bool Equal(Fp a, Fp b)
-    {
-        var spanA = MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref a, 1));
-        var spanB = MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref b, 1));
-        return CryptographicOperations.FixedTimeEquals(spanA, spanB);
-    }
+    public static bool Equal(Fp a, Fp b) => CtEqual(a, b) == 1UL;
     
     internal static bool GreaterThanOrEqual(Fp a, Fp b)
     {

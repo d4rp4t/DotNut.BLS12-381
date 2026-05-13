@@ -214,12 +214,34 @@ public readonly partial struct Fp
     }
     
     /// <summary>
-    /// Returns 1 if the value is zero; otherwise 0. Duh
+    /// Returns 1 if the value is zero; otherwise 0.
+    /// Operates on raw Montgomery limbs — does not canonicalize first.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ulong IsZeroMask(Fp value)
+    internal static ulong IsZeroMask(Fp value)
     {
         ulong x = value.L0 | value.L1 | value.L2 | value.L3 | value.L4 | value.L5;
         return ((x | (0UL - x)) >> 63) ^ 1UL;
     }
+
+    /// <summary>
+    /// Constant-time equality check. Returns 1 if <paramref name="a"/> and <paramref name="b"/>
+    /// represent the same field element (raw limb comparison), 0 otherwise.
+    /// Both inputs must be in reduced form (output of field arithmetic) for this to be correct.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static ulong CtEqual(Fp a, Fp b)
+    {
+        ulong diff = (a.L0 ^ b.L0) | (a.L1 ^ b.L1) | (a.L2 ^ b.L2)
+                   | (a.L3 ^ b.L3) | (a.L4 ^ b.L4) | (a.L5 ^ b.L5);
+        return ((diff | (0UL - diff)) >> 63) ^ 1UL;
+    }
+
+    /// <summary>
+    /// Returns the sign of <paramref name="value"/> as defined in RFC 9380 §4.1:
+    /// 1 if the canonical (non-Montgomery) representation is odd, 0 if even.
+    /// Canonicalizes via Montgomery reduction before extracting the LSB.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static ulong Sgn0(Fp value) => ToCanonical(value).L0 & 1UL;
 }
