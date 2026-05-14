@@ -43,7 +43,7 @@ public readonly partial struct Scalar
 
         return (int)gt - (int)lt;
     }
-
+    
     /// <summary>Equality operator; delegates to <see cref="Equal"/> (constant-time).</summary>
     public static bool operator ==(Scalar a, Scalar b) => Equal(a, b);
 

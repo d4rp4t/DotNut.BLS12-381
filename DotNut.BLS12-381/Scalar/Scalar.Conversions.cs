@@ -1,10 +1,61 @@
 using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 
 namespace DotNut.BLS12_381;
 
 public readonly partial struct Scalar
 {
+    /// <summary>Converts a <see cref="ulong"/> to its scalar field element, reducing modulo r.</summary>
+    public static Scalar From(ulong n) => FromCanonical(new Scalar(n, 0UL, 0UL, 0UL));
+
+    /// <summary>
+    /// Reduces an arbitrary 512-bit integer (eight 64-bit little-endian limbs) modulo r
+    /// and returns the result in Montgomery form.
+    /// Equivalent to Rust's <c>Scalar::from_u512</c>: <c>lo·R + hi·R² mod r</c>.
+    /// </summary>
+    public static Scalar FromU512(ulong l0, ulong l1, ulong l2, ulong l3,
+                                   ulong l4, ulong l5, ulong l6, ulong l7)
+    {
+        var lo = new Scalar(l0, l1, l2, l3);
+        var hi = new Scalar(l4, l5, l6, l7);
+        return Add(Mul(lo, R2), Mul(hi, R3));
+    }
+
+    /// <summary>
+    /// Converts a non-negative <see cref="BigInteger"/> to a scalar by reducing modulo r and converting to Montgomery form.
+    /// Not constant-time — use only for non-secret data (e.g. test vectors, public parameters).
+    /// </summary>
+    /// <param name="k">The integer value; must be non-negative and will be reduced mod r.</param>
+    /// <returns>The scalar k mod r in Montgomery form.</returns>
+    public static Scalar FromBigInteger(BigInteger k)
+    {
+        var bytes = new byte[32];
+        k.TryWriteBytes(bytes, out _, isUnsigned: true, isBigEndian: false);
+        return FromCanonical(new Scalar(
+            ReadUInt64LE(bytes, 0),
+            ReadUInt64LE(bytes, 8),
+            ReadUInt64LE(bytes, 16),
+            ReadUInt64LE(bytes, 24)
+        ));
+    }
+    
+    /// <summary>
+    /// Implicit conversion to <see cref="BigInteger"/>: converts the scalar to its canonical integer value in [0, r).
+    /// Extracts the canonical representation via <see cref="ToCanonical"/>.
+    /// Not constant-time.
+    /// </summary>
+    public static implicit operator BigInteger(Scalar scalar)
+    {
+        var c = ToCanonical(scalar);
+        var bytes = new byte[33]; // extra zero byte = positive sign
+        WriteUInt64LE(bytes, 0,  c.L0);
+        WriteUInt64LE(bytes, 8,  c.L1);
+        WriteUInt64LE(bytes, 16, c.L2);
+        WriteUInt64LE(bytes, 24, c.L3);
+        return new BigInteger(bytes);
+    }
+    
     /// <summary>
     /// Decodes a scalar from 32 bytes in little-endian order and converts to Montgomery form.
     /// The input must represent a canonical integer in [0, r); values ≥ r are rejected.
@@ -159,6 +210,15 @@ public readonly partial struct Scalar
         return Add(FromCanonical(lo), Mul(FromCanonical(hi), R2));
     }
 
+    public static string ToHexString(Scalar value)
+    {
+        var tmp = ToCanonical(value);
+        return $"0x{tmp.L3:x16}" +
+               $"{tmp.L2:x16}" +
+               $"{tmp.L1:x16}" +
+               $"{tmp.L0:x16}";
+    }
+    
     /// <summary>
     /// Returns <see langword="true"/> if <paramref name="a"/> (treated as a canonical integer, not Montgomery form)
     /// is greater than or equal to the group order r.

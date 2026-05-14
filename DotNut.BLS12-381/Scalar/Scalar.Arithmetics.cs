@@ -96,7 +96,7 @@ public readonly partial struct Scalar
     /// Converts an integer a in [0, r) to Montgomery form by computing MontgomeryReduce(a · R²) = a·R mod r.
     /// Input raw limbs must represent a canonical integer in [0, r); they are NOT already in Montgomery form.
     /// </summary>
-    internal static Scalar FromCanonical(Scalar a) => MontgomeryReduce(MultiplyWide(a, R2));
+    public static Scalar FromCanonical(Scalar a) => MontgomeryReduce(MultiplyWide(a, R2));
 
     /// <summary>
     /// Converts a scalar from Montgomery form back to its canonical integer in [0, r).
@@ -240,6 +240,68 @@ public readonly partial struct Scalar
         return new Scalar(l0, l1, l2, l3);
     }
 
+    /// <summary>
+    /// Square-and-multiply exponentiation. <paramref name="exp"/> is a little-endian
+    /// array of 64-bit limbs; bits are processed from MSB to LSB (variable-time).
+    /// </summary>
+    public static Scalar Pow(Scalar value, ReadOnlySpan<ulong> exp)
+    {
+        Scalar result = One;
+        for (int limb = exp.Length - 1; limb >= 0; limb--)
+        {
+            for (int bit = 63; bit >= 0; bit--)
+            {
+                result = Square(result);
+                if (((exp[limb] >> bit) & 1UL) != 0UL)
+                    result = Mul(result, value);
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Computes a square root of <paramref name="value"/> in Fr using Tonelli-Shanks.
+    /// Returns <see langword="null"/> if <paramref name="value"/> is a non-residue.
+    /// </summary>
+    public static Scalar? Sqrt(Scalar value)
+    {
+        if (IsZero(value)) return Zero;
+
+        // (t-1)/2 where r-1 = 2^32 * t
+        ReadOnlySpan<ulong> exp = [
+            0x7fff_2dff_7fff_ffffUL,
+            0x04d0_ec02_a9de_d201UL,
+            0x94ce_bea4_199c_ec04UL,
+            0x0000_0000_39f6_d3a9UL,
+        ];
+        Scalar w = Pow(value, exp);
+        int v = TwoAdicity;
+        Scalar x = Mul(value, w);
+        Scalar b = Mul(x, w);
+        Scalar z = RootOfUnity;
+
+        for (;;)
+        {
+            if (Equal(b, One)) return x;
+
+            int i = 0;
+            Scalar b2i = b;
+            do { b2i = Square(b2i); i++; }
+            while (!Equal(b2i, One) && i < v);
+
+            if (i >= v) return null;
+
+            Scalar w2 = z;
+            for (int j = 0; j < v - i - 1; j++)
+                w2 = Square(w2);
+
+            z = Square(w2);
+            x = Mul(x, w2);
+            b = Mul(b, z);
+            v = i;
+        }
+    }
+    
     /// <summary>
     /// Returns an all-ones mask (0xFFFFFFFFFFFFFFFF) if <paramref name="a"/> is zero, or 0 otherwise.
     /// Operates on raw limbs; does not perform any field conversion.
