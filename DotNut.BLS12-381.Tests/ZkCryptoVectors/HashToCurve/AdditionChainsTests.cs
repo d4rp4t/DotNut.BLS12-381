@@ -34,7 +34,6 @@ namespace DotNut.BLS12_381.Tests
                 Fp actual = AdditionChains.Pm3Div4(input);
 
                 Assert.Equal(expected, actual);
-                
             }
         }
 

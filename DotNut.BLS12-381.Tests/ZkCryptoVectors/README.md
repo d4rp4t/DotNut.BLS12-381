@@ -1,0 +1,1 @@
+All test vectors are reused from https://github.com/zkcrypto/bls12_381
