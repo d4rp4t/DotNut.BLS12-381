@@ -14,7 +14,7 @@ public readonly partial struct Fp
         Fp r = AddUnchecked(a, b, out ulong carry);
         Fp rMinusP = SubtractUnchecked(r, Modulus, out ulong borrow);
         ulong shouldSubtract = carry | (borrow ^ 1UL);
-        return Select(shouldSubtract, rMinusP, r);
+        return ConditionalSelect(shouldSubtract, rMinusP, r);
     }
 
     /// <summary>
@@ -25,7 +25,7 @@ public readonly partial struct Fp
     {
         Fp r = SubtractUnchecked(a, b, out ulong borrow);
         Fp rPlusP = AddUnchecked(r, Modulus, out _);
-        return Select(borrow, rPlusP, r);
+        return ConditionalSelect(borrow, rPlusP, r);
     }
 
     /// <summary>
@@ -48,7 +48,7 @@ public readonly partial struct Fp
     {
         Fp neg = SubtractUnchecked(Modulus, value, out _);
         ulong isZero = IsZeroMask(value);
-        return Select(isZero, Zero, neg);
+        return ConditionalSelect(isZero, Zero, neg);
     }
 
     /// <summary>
@@ -90,7 +90,7 @@ public readonly partial struct Fp
                 result = Square(result);
                 Fp multiplied = Multiply(result, baseValue);
                 ulong b = (e >> bit) & 1UL;
-                result = Select(b, multiplied, result);
+                result = ConditionalSelect(b, multiplied, result);
             }
         }
 
@@ -193,14 +193,14 @@ public readonly partial struct Fp
         Fp r = new(t[6], t[7], t[8], t[9], t[10], t[11]);
         Fp rMinusP = SubtractUnchecked(r, Modulus, out ulong borrow);
         ulong shouldSubtract = borrow ^ 1UL;
-        return Select(shouldSubtract, rMinusP, r);
+        return ConditionalSelect(shouldSubtract, rMinusP, r);
     }
 
     /// <summary>
     /// "Constant-time" conditional selection.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static Fp Select(ulong bit, Fp whenOne, Fp whenZero)
+    internal static Fp ConditionalSelect(ulong bit, Fp whenOne, Fp whenZero)
     {
         ulong mask = 0UL - bit;
         return new Fp(
@@ -235,6 +235,31 @@ public readonly partial struct Fp
         ulong diff = (a.L0 ^ b.L0) | (a.L1 ^ b.L1) | (a.L2 ^ b.L2)
                    | (a.L3 ^ b.L3) | (a.L4 ^ b.L4) | (a.L5 ^ b.L5);
         return ((diff | (0UL - diff)) >> 63) ^ 1UL;
+    }
+
+    /// <summary>
+    /// Branchless select: returns <paramref name="a"/> when mask=0, <paramref name="b"/> when mask=~0UL.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static Fp ConditionalSelect(Fp a, Fp b, ulong mask) => new(
+        (b.L0 & mask) | (a.L0 & ~mask),
+        (b.L1 & mask) | (a.L1 & ~mask),
+        (b.L2 & mask) | (a.L2 & ~mask),
+        (b.L3 & mask) | (a.L3 & ~mask),
+        (b.L4 & mask) | (a.L4 & ~mask),
+        (b.L5 & mask) | (a.L5 & ~mask)
+    );
+
+    /// <summary>
+    /// Returns <paramref name="a"/> if <paramref name="choice"/> is <see langword="false"/>,
+    /// <paramref name="b"/> if <paramref name="choice"/> is <see langword="true"/>.
+    /// Converts the bool to a mask using the CLI guarantee that false=0, true=1 as a byte.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Fp ConditionalSelect(Fp a, Fp b, bool choice)
+    {
+        ulong mask = 0UL - Unsafe.As<bool, byte>(ref Unsafe.AsRef(in choice));
+        return ConditionalSelect(a, b, mask);
     }
 
     /// <summary>

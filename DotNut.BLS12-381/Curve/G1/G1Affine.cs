@@ -19,7 +19,7 @@ public readonly partial struct G1Affine(Fp x, Fp y, bool isInfinity = false)
     public bool IsInfinity { get; } = isInfinity;
 
     /// <summary>The point at infinity (additive identity).</summary>
-    public static readonly G1Affine Infinity = new(Fp.Zero, Fp.Zero, true);
+    public static readonly G1Affine Infinity = new(Fp.Zero, Fp.One, true);
 
     // Source: IETF RFC 9380, Appendix J.9 (BLS12-381 G1 generator)
     // https://www.rfc-editor.org/rfc/rfc9380.html#appendix-J.9
@@ -39,34 +39,76 @@ public readonly partial struct G1Affine(Fp x, Fp y, bool isInfinity = false)
     /// </summary>
     public bool IsOnCurve()
     {
-        if (IsInfinity) return true;
-
         var lhs = Fp.Square(Y);
-        var four = Fp.Add(Fp.Add(Fp.One, Fp.One), Fp.Add(Fp.One, Fp.One));
-        var rhs = Fp.Add(Fp.Multiply(Fp.Square(X), X), four);
-        return Fp.Equal(lhs, rhs);
+        var rhs = Fp.Add(Fp.Multiply(Fp.Square(X), X), CurveB);
+        return Fp.Equal(lhs, rhs) | IsInfinity;
     }
 
     /// <summary>
-    /// Returns <see langword="true"/> if the point is in the G1 subgroup of prime order r.
-    /// Checks curve membership first, then verifies [r]P = O via scalar multiplication.
-    /// This is slower than the fast G2 subgroup check; for G1 the slow check is unavoidable.
-    /// Call <see cref="IsOnCurve"/> alone only when subgroup attacks are not a concern.
+    /// Returns <see langword="true"/> if the point is in the G1 prime-order subgroup.
+    /// Uses the fast endomorphism check: P ∈ G1 iff φ²(P) = −[x²]P,
+    /// where φ(P) = (β·Px, Py) and x = BLS_X.
+    /// Checks curve membership first.
     /// </summary>
     public bool IsInSubgroup()
     {
         if (!IsOnCurve()) return false;
-        return G1Projective.ScalarMultiply(ToProjective(), Scalar.GroupOrderR).IsInfinity;
+        if (IsInfinity) return true;
+        var p = ToProjective();
+        var endoP = new G1Projective(Fp.Multiply(Beta, X), Y, Fp.One);
+        var minusX2P = G1Projective.Negate(G1Projective.MulByBLSX(G1Projective.MulByBLSX(p)));
+        return minusX2P == endoP;
     }
 
     /// <summary>
-    /// Converts this affine point to projective (Jacobian) form.
-    /// The infinity point maps to <see cref="G1Projective.Infinity"/>; otherwise sets Z = 1.
+    /// Converts this affine point to homogeneous projective form without branching.
+    /// Non-infinity: (X, Y, 1). Infinity (X=0, Y=1): (0, 1, 0) = G1Projective.Infinity.
     /// </summary>
-    public G1Projective ToProjective()
+    public G1Projective ToProjective() => new(X, Y, Fp.ConditionalSelect(Fp.One, Fp.Zero, IsInfinity));
+
+    /// <summary>The non-trivial cube root of unity in Fp; β³ = 1, β ≠ 1.</summary>
+    public static readonly Fp Beta = new([
+        0x30f1_361b_798a_64e8,
+        0xf3b8_ddab_7ece_5a2a,
+        0x16a8_ca3a_c615_77f7,
+        0xc26a_2ff8_74fd_029b,
+        0x3636_b766_6070_1c6e,
+        0x051b_a4ab_241b_6160,
+    ]);
+
+    public static bool operator ==(G1Affine a, G1Affine b)
     {
-        return IsInfinity ? G1Projective.Infinity : new G1Projective(X, Y, Fp.One);
+        if (a.IsInfinity && b.IsInfinity) return true;
+        if (a.IsInfinity || b.IsInfinity) return false;
+        return Fp.Equal(a.X, b.X) && Fp.Equal(a.Y, b.Y);
     }
+
+    public static bool operator !=(G1Affine a, G1Affine b) => !(a == b);
+
+    public override bool Equals(object? obj) => obj is G1Affine other && this == other;
+
+    public override int GetHashCode() => HashCode.Combine(X, Y, IsInfinity);
+
+    /// <summary>
+    /// Returns <paramref name="a"/> if <paramref name="choice"/> is <see langword="false"/>,
+    /// <paramref name="b"/> if <paramref name="choice"/> is <see langword="true"/>.
+    /// </summary>
+    public static G1Affine ConditionalSelect(G1Affine a, G1Affine b, bool choice) => new(
+        Fp.ConditionalSelect(a.X, b.X, choice),
+        Fp.ConditionalSelect(a.Y, b.Y, choice),
+        (!choice & a.IsInfinity) | (choice & b.IsInfinity)
+    );
+
+    /// <summary>
+    /// Returns −P: same X, negated Y (or Fp.One for the canonical infinity representation).
+    /// </summary>
+    public static G1Affine Negate(G1Affine p) => new(
+        p.X,
+        Fp.ConditionalSelect(Fp.Negate(p.Y), Fp.One, p.IsInfinity),
+        p.IsInfinity
+    );
+
+    private static readonly Fp CurveB = Fp.Add(Fp.Add(Fp.One, Fp.One), Fp.Add(Fp.One, Fp.One));
 
     /// <summary>
     /// Parses a 48-byte (96 hex-char) big-endian Fp value from hex for use in the generator constant.
@@ -78,4 +120,5 @@ public readonly partial struct G1Affine(Fp x, Fp y, bool isInfinity = false)
         var bytes = Convert.FromHexString(hex);
         return Fp.FromBytesBigEndian(bytes);
     }
+    
 }

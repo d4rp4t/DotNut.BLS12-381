@@ -35,4 +35,21 @@ public readonly partial struct Fp2
         C0 = c0;
         C1 = c1;
     }
+
+    /// <summary>
+    /// Branchless select: returns <paramref name="a"/> when mask=0, <paramref name="b"/> when mask=~0UL.
+    /// </summary>
+    internal static Fp2 ConditionalSelect(Fp2 a, Fp2 b, ulong mask) => new(
+        Fp.ConditionalSelect(a.C0, b.C0, mask),
+        Fp.ConditionalSelect(a.C1, b.C1, mask)
+    );
+
+    /// <summary>
+    /// Returns <paramref name="a"/> if <paramref name="choice"/> is <see langword="false"/>,
+    /// <paramref name="b"/> if <paramref name="choice"/> is <see langword="true"/>.
+    /// </summary>
+    public static Fp2 ConditionalSelect(Fp2 a, Fp2 b, bool choice) => new(
+        Fp.ConditionalSelect(a.C0, b.C0, choice),
+        Fp.ConditionalSelect(a.C1, b.C1, choice)
+    );
 }

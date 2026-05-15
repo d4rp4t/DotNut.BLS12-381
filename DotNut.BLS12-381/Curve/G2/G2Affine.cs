@@ -19,7 +19,7 @@ public readonly partial struct G2Affine(Fp2 x, Fp2 y, bool isInfinity = false)
     public bool IsInfinity { get; } = isInfinity;
 
     /// <summary>The point at infinity (additive identity).</summary>
-    public static readonly G2Affine Infinity = new(Fp2.Zero, Fp2.Zero, true);
+    public static readonly G2Affine Infinity = new(Fp2.Zero, Fp2.One, true);
 
     // Source: RFC 9380, Appendix J.10 (BLS12-381 G2 generator)
     // https://www.rfc-editor.org/rfc/rfc9380.html#appendix-J.10
@@ -45,10 +45,9 @@ public readonly partial struct G2Affine(Fp2 x, Fp2 y, bool isInfinity = false)
     /// </summary>
     public bool IsOnCurve()
     {
-        if (IsInfinity) return true;
         var lhs = Fp2.Square(Y);
         var rhs = Fp2.Add(Fp2.Multiply(Fp2.Square(X), X), CurveB);
-        return Fp2.Equal(lhs, rhs);
+        return Fp2.Equal(lhs, rhs) | IsInfinity;
     }
 
     /// <summary>
@@ -65,19 +64,48 @@ public readonly partial struct G2Affine(Fp2 x, Fp2 y, bool isInfinity = false)
     }
 
     /// <summary>
-    /// Converts this affine point to projective (Jacobian) form.
-    /// The infinity point maps to <see cref="G2Projective.Infinity"/>; otherwise sets Z = 1.
+    /// Converts this affine point to homogeneous projective form without branching.
+    /// Non-infinity: (X, Y, 1). Infinity (X=0, Y=1): (0, 1, 0) = G2Projective.Infinity.
     /// </summary>
-    public G2Projective ToProjective()
-    {
-        return IsInfinity ? G2Projective.Infinity : new G2Projective(X, Y, Fp2.One);
-    }
+    public G2Projective ToProjective() => new(X, Y, Fp2.ConditionalSelect(Fp2.One, Fp2.Zero, IsInfinity));
 
     /// <summary>The G2 curve constant B = 4 + 4u (coefficient of the constant term in y² = x³ + B).</summary>
     private static readonly Fp2 CurveB = new(
         Fp.Add(Fp.Add(Fp.One, Fp.One), Fp.Add(Fp.One, Fp.One)),
         Fp.Add(Fp.Add(Fp.One, Fp.One), Fp.Add(Fp.One, Fp.One))
     );
+
+    /// <summary>
+    /// Returns <paramref name="a"/> if <paramref name="choice"/> is <see langword="false"/>,
+    /// <paramref name="b"/> if <paramref name="choice"/> is <see langword="true"/>.
+    /// </summary>
+    public static G2Affine ConditionalSelect(G2Affine a, G2Affine b, bool choice) => new(
+        Fp2.ConditionalSelect(a.X, b.X, choice),
+        Fp2.ConditionalSelect(a.Y, b.Y, choice),
+        (!choice & a.IsInfinity) | (choice & b.IsInfinity)
+    );
+
+    /// <summary>
+    /// Returns −P: same X, negated Y (or Fp2.One for the canonical infinity representation).
+    /// </summary>
+    public static G2Affine Negate(G2Affine p) => new(
+        p.X,
+        Fp2.ConditionalSelect(Fp2.Negate(p.Y), Fp2.One, p.IsInfinity),
+        p.IsInfinity
+    );
+
+    public static bool operator ==(G2Affine a, G2Affine b)
+    {
+        if (a.IsInfinity && b.IsInfinity) return true;
+        if (a.IsInfinity || b.IsInfinity) return false;
+        return Fp2.Equal(a.X, b.X) && Fp2.Equal(a.Y, b.Y);
+    }
+
+    public static bool operator !=(G2Affine a, G2Affine b) => !(a == b);
+
+    public override bool Equals(object? obj) => obj is G2Affine other && this == other;
+
+    public override int GetHashCode() => HashCode.Combine(X, Y, IsInfinity);
 
     /// <summary>
     /// Parses a 48-byte (96 hex-char) big-endian Fp value from hex for use in the generator constant.

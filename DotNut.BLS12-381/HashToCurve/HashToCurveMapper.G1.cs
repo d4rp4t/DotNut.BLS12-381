@@ -522,7 +522,7 @@ public static partial class HashToCurveMapper
         // x_den = A' · ( -ndCommon ) when ndCommon ≠ 0, else A' · ξ  (exceptional case)
         var xDen = Fp.Multiply(
             SSWU_ELLP_A,
-            Fp.Select(Fp.IsZeroMask(ndCommon), SSWU_XI, Fp.Negate(ndCommon)));
+            Fp.ConditionalSelect(Fp.IsZeroMask(ndCommon), SSWU_XI, Fp.Negate(ndCommon)));
 
         var x0Num = Fp.Multiply(SSWU_ELLP_B, Fp.Add(Fp.One, ndCommon));
 
@@ -545,11 +545,11 @@ public static partial class HashToCurveMapper
         // y for the x1 branch: √(−ξ³) · u³ · sqrtCandidate
         var y1 = Fp.Multiply(Fp.Multiply(SQRT_M_XI_CUBED, Fp.Multiply(usq, u)), sqrtCandidate);
 
-        var xNum = Fp.Select(gx0Square, x0Num, x1Num);
-        var y    = Fp.Select(gx0Square, sqrtCandidate, y1);
+        var xNum = Fp.ConditionalSelect(gx0Square, x0Num, x1Num);
+        var y    = Fp.ConditionalSelect(gx0Square, sqrtCandidate, y1);
 
         // sgn0(y) must equal sgn0(u); negate y if they differ
-        y = Fp.Select(Fp.Sgn0(y) ^ Fp.Sgn0(u), Fp.Negate(y), y);
+        y = Fp.ConditionalSelect(Fp.Sgn0(y) ^ Fp.Sgn0(u), Fp.Negate(y), y);
 
         // projective: (x, y, z) = (xNum, y·xDen, xDen) → affine x = xNum/xDen, affine y = y
         return new G1Projective(xNum, Fp.Multiply(y, xDen), xDen);
@@ -587,16 +587,10 @@ public static partial class HashToCurveMapper
         mapVals[2] = Fp.Multiply(mapVals[2], u.Y);
         mapVals[3] = Fp.Multiply(mapVals[3], u.Z);
 
-        // Result is in homogeneous projective (affine = X/Z, Y/Z).
-        // G1Projective uses Jacobian (affine = X/Z², Y/Z³), so convert:
-        //   XJ = x_aff · ZJ² = hX · hZ,  YJ = y_aff · ZJ³ = hY · hZ²,  ZJ = hZ
         var hX = Fp.Multiply(mapVals[0], mapVals[3]);
         var hY = Fp.Multiply(mapVals[2], mapVals[1]);
         var hZ = Fp.Multiply(mapVals[1], mapVals[3]);
-        return new G1Projective(
-            Fp.Multiply(hX, hZ),
-            Fp.Multiply(hY, Fp.Square(hZ)),
-            hZ);
+        return new G1Projective(hX, hY, hZ);
     }
 
 }

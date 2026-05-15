@@ -92,7 +92,7 @@ public readonly partial struct Fp
             {
                 result = Square(result);
                 var multiplied = Multiply(result, value);
-                result = Select((e >> bit) & 1UL, multiplied, result);
+                result = ConditionalSelect((e >> bit) & 1UL, multiplied, result);
             }
         }
         return result;

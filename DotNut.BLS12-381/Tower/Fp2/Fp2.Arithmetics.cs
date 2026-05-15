@@ -135,11 +135,11 @@ public readonly partial struct Fp2
     /// <summary>
     /// Constant-time conditional selection. Returns <paramref name="whenOne"/> when
     /// <paramref name="bit"/> is 1, <paramref name="whenZero"/> when 0.
-    /// Delegates component-wise to <see cref="Fp.Select"/>.
+    /// Delegates component-wise to <see cref="Fp.ConditionalSelect(ulong,DotNut.BLS12_381.Tower.Fp,DotNut.BLS12_381.Tower.Fp)"/>.
     /// </summary>
-    internal static Fp2 Select(ulong bit, Fp2 whenOne, Fp2 whenZero)
-        => new(Fp.Select(bit, whenOne.C0, whenZero.C0),
-               Fp.Select(bit, whenOne.C1, whenZero.C1));
+    internal static Fp2 ConditionalSelect(ulong bit, Fp2 whenOne, Fp2 whenZero)
+        => new(Fp.ConditionalSelect(bit, whenOne.C0, whenZero.C0),
+               Fp.ConditionalSelect(bit, whenOne.C1, whenZero.C1));
 
     /// <summary>
     /// Returns 1 if both components are zero, 0 otherwise.

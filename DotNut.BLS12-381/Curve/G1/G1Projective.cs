@@ -3,9 +3,11 @@ using DotNut.BLS12_381.Tower;
 namespace DotNut.BLS12_381.Curve.G1;
 
 /// <summary>
-/// A point on the BLS12-381 G1 curve in projective (Jacobian) coordinates (X : Y : Z) over Fp.
-/// The affine point (x, y) is represented as (X = x·Z², Y = y·Z³, Z ≠ 0).
-/// The point at infinity is represented by Z = 0.
+/// A point on the BLS12-381 G1 curve in homogeneous projective coordinates (X : Y : Z) over Fp.
+/// The affine point (x, y) is represented as (x·Z : y·Z : Z) for any Z ≠ 0.
+/// The point at infinity uses the canonical representation (0 : 1 : 0).
+/// Arithmetic uses Algorithm 7 (compvare addition) and Algorithm 9 (doubling) from
+/// https://eprint.iacr.org/2015/1060.pdf.
 /// </summary>
 public readonly struct G1Projective(Fp x, Fp y, Fp z)
 {
@@ -18,77 +20,126 @@ public readonly struct G1Projective(Fp x, Fp y, Fp z)
     /// <summary>Projective Z coordinate in Montgomery form.</summary>
     public Fp Z { get; } = z;
 
-    /// <summary>The point at infinity (Z = 0).</summary>
+    /// <summary>The point at infinity (canonical representation).</summary>
     public static readonly G1Projective Infinity = new(Fp.Zero, Fp.One, Fp.Zero);
+
+    /// <summary>The standard generator of G1, lifted from G1Affine.</summary>
+    public static G1Projective Generator => G1Affine.Generator.ToProjective();
 
     /// <summary>Returns <see langword="true"/> if Z = 0 (this is the point at infinity).</summary>
     public bool IsInfinity => Fp.Equal(Z, Fp.Zero);
 
     /// <summary>
-    /// Returns P + Q using the EFD add-2007-bl formula for short Weierstrass curves in Jacobian coordinates.
-    /// Handles the infinity case explicitly; degenerate cases (P = Q or P = −Q) are handled via <see cref="Double"/>.
-    /// Both inputs must have all coordinates in Montgomery form.
+    /// Compvare projective addition using Algorithm 7, https://eprint.iacr.org/2015/1060.pdf.
+    /// Handles all cases including the point at infinity, P = Q, and P = −Q.
     /// </summary>
     public static G1Projective Add(G1Projective p, G1Projective q)
     {
-        if (p.IsInfinity) return q;
-        if (q.IsInfinity) return p;
-
-        // EFD: add-2007-bl for short Weierstrass in Jacobian coordinates.
-        var z1z1 = Fp.Square(p.Z);
-        var z2z2 = Fp.Square(q.Z);
-        var u1 = Fp.Multiply(p.X, z2z2);
-        var u2 = Fp.Multiply(q.X, z1z1);
-        var s1 = Fp.Multiply(p.Y, Fp.Multiply(q.Z, z2z2));
-        var s2 = Fp.Multiply(q.Y, Fp.Multiply(p.Z, z1z1));
-
-        if (Fp.Equal(u1, u2))
-            return Fp.Equal(s1, s2) ? Double(p) : Infinity;
-
-        var h = Fp.Subtract(u2, u1);
-        var i = Fp.Square(DoubleFp(h));
-        var j = Fp.Multiply(h, i);
-        var r = DoubleFp(Fp.Subtract(s2, s1));
-        var v = Fp.Multiply(u1, i);
-
-        var x3 = Fp.Subtract(Fp.Subtract(Fp.Square(r), j), DoubleFp(v));
-        var y3 = Fp.Subtract(Fp.Multiply(r, Fp.Subtract(v, x3)), Fp.Multiply(DoubleFp(s1), j));
-        var z3 = Fp.Multiply(Fp.Subtract(Fp.Subtract(Fp.Square(Fp.Add(p.Z, q.Z)), z1z1), z2z2), h);
+        var t0 = Fp.Multiply(p.X, q.X);
+        var t1 = Fp.Multiply(p.Y, q.Y);
+        var t2 = Fp.Multiply(p.Z, q.Z);
+        var t3 = Fp.Add(p.X, p.Y);
+        var t4 = Fp.Add(q.X, q.Y);
+        t3 = Fp.Multiply(t3, t4);
+        t4 = Fp.Add(t0, t1);
+        t3 = Fp.Subtract(t3, t4);
+        t4 = Fp.Add(p.Y, p.Z);
+        var x3 = Fp.Add(q.Y, q.Z);
+        t4 = Fp.Multiply(t4, x3);
+        x3 = Fp.Add(t1, t2);
+        t4 = Fp.Subtract(t4, x3);
+        x3 = Fp.Add(p.X, p.Z);
+        var y3 = Fp.Add(q.X, q.Z);
+        x3 = Fp.Multiply(x3, y3);
+        y3 = Fp.Add(t0, t2);
+        y3 = Fp.Subtract(x3, y3);
+        x3 = Fp.Add(t0, t0);
+        t0 = Fp.Add(x3, t0);
+        t2 = MulBy3b(t2);
+        var z3 = Fp.Add(t1, t2);
+        t1 = Fp.Subtract(t1, t2);
+        y3 = MulBy3b(y3);
+        x3 = Fp.Multiply(t4, y3);
+        t2 = Fp.Multiply(t3, t1);
+        x3 = Fp.Subtract(t2, x3);
+        y3 = Fp.Multiply(y3, t0);
+        t1 = Fp.Multiply(t1, z3);
+        y3 = Fp.Add(t1, y3);
+        t0 = Fp.Multiply(t0, t3);
+        z3 = Fp.Multiply(z3, t4);
+        z3 = Fp.Add(z3, t0);
         return new G1Projective(x3, y3, z3);
     }
 
+    public static G1Projective Add(G1Projective p, G1Affine q)
+    {
+        // Algorithm 8, https://eprint.iacr.org/2015/1060.pdf
+
+        var t0 = Fp.Multiply(p.X, q.X);
+        var t1 = Fp.Multiply(p.Y, q.Y);
+        var t3 = Fp.Add(q.X, q.Y);
+        var t4 = Fp.Add(p.X, p.Y);
+        t3 = Fp.Multiply(t3, t4);
+        t4 = Fp.Add(t0, t1);
+        t3 = Fp.Subtract(t3, t4);
+        t4 = Fp.Multiply(q.Y, p.Z);
+        t4 = Fp.Add(t4, p.Y);
+        var y3 = Fp.Multiply(q.X, p.Z);
+        y3 = Fp.Add(y3, p.X);
+        var x3 = Fp.Add(t0, t0);
+        t0 = Fp.Add(x3, t0);
+        var t2 = MulBy3b(p.Z);
+        var z3 = Fp.Add(t1, t2);
+        t1 = Fp.Subtract(t1, t2);
+        y3 = MulBy3b(y3);
+        x3 = Fp.Multiply(t4, y3);
+        t2 = Fp.Multiply(t3, t1);
+        x3 = Fp.Subtract(t2, x3);
+        y3 = Fp.Multiply(y3, t0);
+        t1 = Fp.Multiply(t1, z3);
+        y3 = Fp.Add(t1, y3);
+        t0 = Fp.Multiply(t0, t3);
+        z3 = Fp.Multiply(z3, t4);
+        z3 = Fp.Add(z3, t0);
+
+        var tmp = new G1Projective(x3, y3, z3);
+
+        return ConditionalSelect(tmp, p, q.IsInfinity);
+    }
+    
+    public static G1Projective Add(G1Affine p, G1Projective q) => Add(q, p);
+
     /// <summary>
-    /// Returns 2·P using the EFD dbl-2009-l formula for a = 0 Weierstrass curves in Jacobian coordinates.
-    /// Returns infinity if P is the point at infinity or if Y = 0 (a point of order 2, impossible in G1
-    /// since r is prime and r > 2, but guarded defensively).
-    /// Input must have all coordinates in Montgomery form.
+    /// Projective doubling using Algorithm 9, https://eprint.iacr.org/2015/1060.pdf.
+    /// Returns the identity if P is the point at infinity.
     /// </summary>
     public static G1Projective Double(G1Projective p)
     {
-        if (p.IsInfinity || Fp.Equal(p.Y, Fp.Zero)) return Infinity;
-
-        // EFD: dbl-2009-l for a=0 curve in Jacobian coordinates.
-        var a = Fp.Square(p.X);
-        var b = Fp.Square(p.Y);
-        var c = Fp.Square(b);
-        var d = DoubleFp(Fp.Subtract(Fp.Subtract(Fp.Square(Fp.Add(p.X, b)), a), c));
-        var e = TripleFp(a);
-        var f = Fp.Square(e);
-        var x3 = Fp.Subtract(f, DoubleFp(d));
-        var y3 = Fp.Subtract(Fp.Multiply(e, Fp.Subtract(d, x3)), EightFp(c));
-        var z3 = DoubleFp(Fp.Multiply(p.Y, p.Z));
-        return new G1Projective(x3, y3, z3);
+        var t0 = Fp.Square(p.Y);
+        var z3 = Fp.Add(t0, t0);
+        z3 = Fp.Add(z3, z3);
+        z3 = Fp.Add(z3, z3);
+        var t1 = Fp.Multiply(p.Y, p.Z);
+        var t2 = Fp.Square(p.Z);
+        t2 = MulBy3b(t2);
+        var x3 = Fp.Multiply(t2, z3);
+        var y3 = Fp.Add(t0, t2);
+        z3 = Fp.Multiply(t1, z3);
+        t1 = Fp.Add(t2, t2);
+        t2 = Fp.Add(t1, t2);
+        t0 = Fp.Subtract(t0, t2);
+        y3 = Fp.Multiply(t0, y3);
+        y3 = Fp.Add(x3, y3);
+        t1 = Fp.Multiply(p.X, p.Y);
+        x3 = Fp.Multiply(t0, t1);
+        x3 = Fp.Add(x3, x3);
+        return p.IsInfinity ? Infinity : new G1Projective(x3, y3, z3);
     }
 
     /// <summary>
     /// Computes [k]P using the Montgomery ladder scalar multiplication algorithm.
-    /// Processes 255 bits of the scalar (bits 254 down to 0); the scalar must fit in 255 bits
-    /// (all scalars in [0, r) satisfy this since r &lt; 2^255).
-    /// The algorithm is constant-time with respect to the scalar.
+    /// Processes 255 bits of the scalar; constant-time with respect to the scalar.
     /// </summary>
-    /// <param name="p">The base point. Must have coordinates in Montgomery form.</param>
-    /// <param name="k">The scalar multiplier (in Montgomery form internally).</param>
-    /// <returns>[k]P in projective coordinates.</returns>
     public static G1Projective ScalarMultiply(G1Projective p, Scalar k)
     {
         var r0 = Infinity;
@@ -106,45 +157,24 @@ public readonly struct G1Projective(Fp x, Fp y, Fp z)
         return r0;
     }
 
-    /// <summary>
-    /// Branchless conditional swap of two projective points.
-    /// When <paramref name="bit"/> = 1, swaps a and b; when 0, leaves them unchanged.
-    /// Operates on raw limbs without field arithmetic.
-    /// </summary>
     private static (G1Projective, G1Projective) CtSwap(ulong bit, G1Projective a, G1Projective b)
     {
         ulong mask = 0UL - bit;
         return (
-            new G1Projective(CtSelect(mask, b.X, a.X), CtSelect(mask, b.Y, a.Y), CtSelect(mask, b.Z, a.Z)),
-            new G1Projective(CtSelect(mask, a.X, b.X), CtSelect(mask, a.Y, b.Y), CtSelect(mask, a.Z, b.Z))
+            new G1Projective(Fp.ConditionalSelect(a.X, b.X, mask), Fp.ConditionalSelect(a.Y, b.Y, mask), Fp.ConditionalSelect(a.Z, b.Z, mask)),
+            new G1Projective(Fp.ConditionalSelect(b.X, a.X, mask), Fp.ConditionalSelect(b.Y, a.Y, mask), Fp.ConditionalSelect(b.Z, a.Z, mask))
         );
     }
 
     /// <summary>
-    /// Branchless conditional select of an Fp element.
-    /// Returns x if mask is all-ones (0xFFFF...), y if mask is zero.
-    /// Does not perform Montgomery reduction.
-    /// </summary>
-    private static Fp CtSelect(ulong mask, Fp x, Fp y) => new(
-        (x.L0 & mask) | (y.L0 & ~mask),
-        (x.L1 & mask) | (y.L1 & ~mask),
-        (x.L2 & mask) | (y.L2 & ~mask),
-        (x.L3 & mask) | (y.L3 & ~mask),
-        (x.L4 & mask) | (y.L4 & ~mask),
-        (x.L5 & mask) | (y.L5 & ~mask)
-    );
-
-    /// <summary>
-    /// Converts this projective point to affine form by computing (X/Z², Y/Z³).
+    /// Converts this homogeneous projective point to affine form by computing (X/Z, Y/Z).
     /// Returns <see cref="G1Affine.Infinity"/> if this is the point at infinity.
     /// </summary>
     public G1Affine ToAffine()
     {
         if (IsInfinity) return G1Affine.Infinity;
         var zInv = Fp.Invert(Z);
-        var z2 = Fp.Square(zInv);
-        var z3 = Fp.Multiply(z2, zInv);
-        return new G1Affine(Fp.Multiply(X, z2), Fp.Multiply(Y, z3));
+        return new G1Affine(Fp.Multiply(X, zInv), Fp.Multiply(Y, zInv));
     }
 
     /// <summary>Converts to affine and checks the curve equation. See <see cref="G1Affine.IsOnCurve"/>.</summary>
@@ -152,14 +182,12 @@ public readonly struct G1Projective(Fp x, Fp y, Fp z)
 
     /// <summary>
     /// Clears the E1(Fp) cofactor h1 = 1 + BLS_X so that the result is in the G1 prime-order subgroup.
-    /// Uses h1 = 1 + BLS_X = 0xd201000000010001; computes [h1]P = P + [BLS_X]P.
     /// </summary>
     public G1Projective ClearCofactor() => Add(this, MulByBLSX(this));
 
     /// <summary>
     /// Computes [BLS_X]P via left-to-right binary double-and-add.
-    /// BLS_X = 0xd201000000010000 (6 set bits; 64-bit scalar).
-    /// Used by <see cref="ClearCofactor"/> and the G2 subgroup check.
+    /// BLS_X = 0xd201000000010000.
     /// </summary>
     internal static G1Projective MulByBLSX(G1Projective p)
     {
@@ -179,12 +207,52 @@ public readonly struct G1Projective(Fp x, Fp y, Fp z)
         return acc;
     }
 
-    /// <summary>Returns 2·v as an Fp element via addition (no Montgomery overhead vs. a literal 2×).</summary>
-    private static Fp DoubleFp(Fp v) => Fp.Add(v, v);
+    /// <summary>
+    /// Returns <paramref name="a"/> if <paramref name="choice"/> is <see langword="false"/>,
+    /// <paramref name="b"/> if <paramref name="choice"/> is <see langword="true"/>.
+    /// </summary>
+    public static G1Projective ConditionalSelect(G1Projective a, G1Projective b, bool choice) => new(
+        Fp.ConditionalSelect(a.X, b.X, choice),
+        Fp.ConditionalSelect(a.Y, b.Y, choice),
+        Fp.ConditionalSelect(a.Z, b.Z, choice)
+    );
 
-    /// <summary>Returns 3·v as an Fp element.</summary>
-    private static Fp TripleFp(Fp v) => Fp.Add(v, DoubleFp(v));
+    /// <summary>Returns −P by negating the Y coordinate.</summary>
+    public static G1Projective Negate(G1Projective p) =>
+        new(p.X, Fp.Negate(p.Y), p.Z);
 
-    /// <summary>Returns 8·v as an Fp element via three doublings.</summary>
-    private static Fp EightFp(Fp v) => DoubleFp(DoubleFp(DoubleFp(v)));
+    /// <summary>Returns P − Q as P + (−Q).</summary>
+    public static G1Projective Subtract(G1Projective a, G1Projective b) =>
+        Add(a, Negate(b));
+    /// <summary>Returns P − Q as P + (−Q).</summary>
+    public static G1Projective Subtract(G1Projective a, G1Affine b) => Add(a, G1Affine.Negate(b));
+    /// <summary>Returns P − Q as P + (−Q).</summary>
+    public static G1Projective Subtract(G1Affine a, G1Projective b) => Add(G1Affine.Negate(a), b);
+    
+    /// <summary>
+    /// Projective equivalence: (X1:Y1:Z1) == (X2:Y2:Z2) iff X1·Z2 = X2·Z1 and Y1·Z2 = Y2·Z1.
+    /// Both points at infinity are equal.
+    /// </summary>
+    public static bool operator ==(G1Projective a, G1Projective b)
+    {
+        bool aInf = a.IsInfinity, bInf = b.IsInfinity;
+        if (aInf && bInf) return true;
+        if (aInf || bInf) return false;
+        return Fp.Equal(Fp.Multiply(a.X, b.Z), Fp.Multiply(b.X, a.Z))
+            && Fp.Equal(Fp.Multiply(a.Y, b.Z), Fp.Multiply(b.Y, a.Z));
+    }
+
+    public static bool operator !=(G1Projective a, G1Projective b) => !(a == b);
+
+    public override bool Equals(object? obj) => obj is G1Projective other && this == other;
+
+    public override int GetHashCode() => ToAffine().GetHashCode();
+
+    // 3B = 12 (B = 4 for G1 curve y² = x³ + 4)
+    private static Fp MulBy3b(Fp a)
+    {
+        a = Fp.Add(a, a); // 2a
+        a = Fp.Add(a, a); // 4a
+        return Fp.Add(Fp.Add(a, a), a); // 12a
+    }
 }

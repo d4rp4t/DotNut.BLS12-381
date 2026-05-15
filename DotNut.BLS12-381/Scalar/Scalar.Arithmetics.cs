@@ -23,7 +23,7 @@ public readonly partial struct Scalar
         Scalar r = AddUnchecked(a, b, out ulong carry);
         Scalar rMinusP = SubUnchecked(r, GroupOrderR, out ulong borrow);
         ulong shouldSubtract = carry | (borrow ^ 1UL);
-        return Select(shouldSubtract, rMinusP, r);
+        return ConditionalSelect(shouldSubtract, rMinusP, r);
     }
 
     /// <summary>
@@ -34,7 +34,7 @@ public readonly partial struct Scalar
     {
         Scalar r = SubUnchecked(a, b, out ulong borrow);
         Scalar rPlusP = AddUnchecked(r, GroupOrderR, out _);
-        return Select(borrow, rPlusP, r);
+        return ConditionalSelect(borrow, rPlusP, r);
     }
 
     /// <summary>
@@ -56,7 +56,7 @@ public readonly partial struct Scalar
     public static Scalar Negate(Scalar a)
     {
         Scalar neg = SubUnchecked(GroupOrderR, a, out _);
-        return Select(IsZeroMask(a), Zero, neg);
+        return ConditionalSelect(IsZeroMask(a), Zero, neg);
     }
 
     /// <summary>
@@ -86,7 +86,7 @@ public readonly partial struct Scalar
             {
                 result = Square(result);
                 Scalar t = Mul(result, a);
-                result = Select((e >> bit) & 1UL, t, result);
+                result = ConditionalSelect((e >> bit) & 1UL, t, result);
             }
         }
         return result;
@@ -193,7 +193,7 @@ public readonly partial struct Scalar
         }
         Scalar r = new(t[4], t[5], t[6], t[7]);
         Scalar rMinusM = SubUnchecked(r, GroupOrderR, out ulong borrow);
-        return Select(borrow ^ 1UL, rMinusM, r);
+        return ConditionalSelect(borrow ^ 1UL, rMinusM, r);
     }
 
     /// <summary>
@@ -201,7 +201,7 @@ public readonly partial struct Scalar
     /// <paramref name="whenZero"/> if <paramref name="bit"/> = 0.
     /// Does not perform any field arithmetic.
     /// </summary>
-    private static Scalar Select(ulong bit, Scalar whenOne, Scalar whenZero)
+    private static Scalar ConditionalSelect(ulong bit, Scalar whenOne, Scalar whenZero)
     {
         ulong mask = 0UL - bit;
         return new Scalar(

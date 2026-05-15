@@ -382,7 +382,7 @@ private static Fp2 SSWU_RV1 = new Fp2(
 
         var xDen = Fp2.Multiply(
             G2_SSWU_ELLP_A,
-            Fp2.Select(Fp2.IsZeroMask(ndCommon), G2_SSWU_XI, Fp2.Negate(ndCommon)));
+            Fp2.ConditionalSelect(Fp2.IsZeroMask(ndCommon), G2_SSWU_XI, Fp2.Negate(ndCommon)));
 
         var x0Num = Fp2.Multiply(G2_SSWU_ELLP_B, Fp2.Add(Fp2.One, ndCommon));
 
@@ -405,15 +405,15 @@ private static Fp2 SSWU_RV1 = new Fp2(
 
         // candidate * i  (multiply by u: (a+b·u)·u = −b + a·u)
         var tmp = new Fp2(Fp.Negate(sqrtCandidate.C1), sqrtCandidate.C0);
-        y = Fp2.Select(Fp2.CtEqual(Fp2.Multiply(Fp2.Square(tmp), gxDen), gx0Num), tmp, y);
+        y = Fp2.ConditionalSelect(Fp2.CtEqual(Fp2.Multiply(Fp2.Square(tmp), gxDen), gx0Num), tmp, y);
 
         // candidate * rv1
         tmp = Fp2.Multiply(sqrtCandidate, SSWU_RV1);
-        y = Fp2.Select(Fp2.CtEqual(Fp2.Multiply(Fp2.Square(tmp), gxDen), gx0Num), tmp, y);
+        y = Fp2.ConditionalSelect(Fp2.CtEqual(Fp2.Multiply(Fp2.Square(tmp), gxDen), gx0Num), tmp, y);
 
         // candidate * rv1 * (-i)  (Fp2(tmp.C1, -tmp.C0))
         tmp = new Fp2(tmp.C1, Fp.Negate(tmp.C0));
-        y = Fp2.Select(Fp2.CtEqual(Fp2.Multiply(Fp2.Square(tmp), gxDen), gx0Num), tmp, y);
+        y = Fp2.ConditionalSelect(Fp2.CtEqual(Fp2.Multiply(Fp2.Square(tmp), gxDen), gx0Num), tmp, y);
 
         // x1 branch: g(x1) = g(x0) · ξ³u⁶; try each SSWU_ETA
         var gx1Num = Fp2.Multiply(gx0Num, Fp2.Multiply(xiUsq, xisqU4));
@@ -423,15 +423,15 @@ private static Fp2 SSWU_RV1 = new Fp2(
         {
             tmp = Fp2.Multiply(sqrtCandX1, eta);
             var found = Fp2.CtEqual(Fp2.Multiply(Fp2.Square(tmp), gxDen), gx1Num);
-            y = Fp2.Select(found, tmp, y);
+            y = Fp2.ConditionalSelect(found, tmp, y);
             etaFound |= found;
         }
 
         // if eta branch: x_num = x0_num · ξu²  (= x1_num), else x_num = x0_num
-        var xNum = Fp2.Select(etaFound, Fp2.Multiply(x0Num, xiUsq), x0Num);
+        var xNum = Fp2.ConditionalSelect(etaFound, Fp2.Multiply(x0Num, xiUsq), x0Num);
 
         // sgn0(y) must equal sgn0(u)
-        y = Fp2.Select(Fp2.Sgn0(u) ^ Fp2.Sgn0(y), Fp2.Negate(y), y);
+        y = Fp2.ConditionalSelect(Fp2.Sgn0(u) ^ Fp2.Sgn0(y), Fp2.Negate(y), y);
 
         return new G2Projective(xNum, Fp2.Multiply(y, xDen), xDen);
     }
@@ -461,16 +461,10 @@ private static Fp2 SSWU_RV1 = new Fp2(
         mapVals[2] = Fp2.Multiply(mapVals[2], u.Y);
         mapVals[3] = Fp2.Multiply(mapVals[3], u.Z);
 
-        // Result is in homogeneous projective (affine = X/Z, Y/Z).
-        // G2Projective uses Jacobian (affine = X/Z², Y/Z³), so convert:
-        //   XJ = hX · hZ,  YJ = hY · hZ²,  ZJ = hZ
         var hX = Fp2.Multiply(mapVals[0], mapVals[3]);
         var hY = Fp2.Multiply(mapVals[2], mapVals[1]);
         var hZ = Fp2.Multiply(mapVals[1], mapVals[3]);
-        return new G2Projective(
-            Fp2.Multiply(hX, hZ),
-            Fp2.Multiply(hY, Fp2.Square(hZ)),
-            hZ);
+        return new G2Projective(hX, hY, hZ);
     }
 
 }
