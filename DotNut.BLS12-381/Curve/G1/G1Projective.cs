@@ -30,7 +30,7 @@ public readonly struct G1Projective(Fp x, Fp y, Fp z)
     public bool IsInfinity => Fp.Equal(Z, Fp.Zero);
 
     /// <summary>
-    /// Compvare projective addition using Algorithm 7, https://eprint.iacr.org/2015/1060.pdf.
+    /// Complete projective addition using Algorithm 7, https://eprint.iacr.org/2015/1060.pdf.
     /// Handles all cases including the point at infinity, P = Q, and P = −Q.
     /// </summary>
     public static G1Projective Add(G1Projective p, G1Projective q)

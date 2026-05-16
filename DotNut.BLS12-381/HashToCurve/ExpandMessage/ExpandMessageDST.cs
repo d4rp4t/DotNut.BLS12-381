@@ -51,20 +51,10 @@ internal sealed class ExpandMessageDST
             return new ExpandMessageDST(dst.ToArray());
 
         byte[] buf = new byte[outputLength];
-        if (algorithm == XofAlgorithm.Shake128)
-        {
-            using var xof = new Shake128();
-            xof.AppendData(OverSizeSalt);
-            xof.AppendData(dst);
-            xof.GetHashAndReset(buf);
-        }
-        else
-        {
-            using var xof = new Shake256();
-            xof.AppendData(OverSizeSalt);
-            xof.AppendData(dst);
-            xof.GetHashAndReset(buf);
-        }
+        Shake xof = Shake.Create(algorithm);
+        xof.AppendData(OverSizeSalt);
+        xof.AppendData(dst);
+        xof.GetHashAndReset(buf);
         return new ExpandMessageDST(buf);
     }
 }

@@ -1,0 +1,5 @@
+These files contain modified versions of BouncyCastle code.
+Original code can be found here:
+
+https://github.com/bcgit/bc-csharp/blob/master/crypto/src/crypto/digests/ShakeDigest.cs
+https://github.com/bcgit/bc-csharp/blob/master/crypto/src/crypto/digests/KeccakDigest.cs

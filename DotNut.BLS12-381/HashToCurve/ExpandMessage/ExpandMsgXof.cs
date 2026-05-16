@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-
 namespace DotNut.BLS12_381.HashToCurve;
 
 /// <summary>
@@ -48,24 +46,12 @@ internal sealed class ExpandMsgXof
         byte[] lenBe = [(byte)(lenInBytes >> 8), (byte)lenInBytes];
         byte[] dstLenByte = [(byte)dstObj.Length];
 
-        if (algorithm == XofAlgorithm.Shake128)
-        {
-            using Shake128 xof = new Shake128();
-            xof.AppendData(message);
-            xof.AppendData(lenBe);
-            xof.AppendData(dstObj.Data);
-            xof.AppendData(dstLenByte);
-            xof.GetHashAndReset(output);
-        }
-        else
-        {
-            using Shake256 xof = new Shake256();
-            xof.AppendData(message);
-            xof.AppendData(lenBe);
-            xof.AppendData(dstObj.Data);
-            xof.AppendData(dstLenByte);
-            xof.GetHashAndReset(output);
-        }
+        Shake xof = Shake.Create(algorithm);
+        xof.AppendData(message);
+        xof.AppendData(lenBe);
+        xof.AppendData(dstObj.Data);
+        xof.AppendData(dstLenByte);
+        xof.GetHashAndReset(output);
 
         return new ExpandMsgXof(output);
     }
