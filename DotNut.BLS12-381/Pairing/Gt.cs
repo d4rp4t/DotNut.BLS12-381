@@ -120,6 +120,19 @@ public readonly struct Gt
     /// Delegates to <see cref="Fp12.Equal"/>.
     /// </summary>
     public static bool Equal(Gt a, Gt b) => Fp12.Equal(a.Value, b.Value);
+    
+    public static bool operator ==(Gt a, Gt b) => Equal(a, b);
+    public static bool operator !=(Gt a, Gt b) => !Equal(a, b);
+    
+    public override bool Equals(object? obj)
+    {
+        return obj is Gt other && Equal(this, other);
+    }
+
+    public override int GetHashCode()
+    {
+        return Value.GetHashCode();
+    }
 
     /// <summary>
     /// Returns <paramref name="b"/> if <paramref name="chooseB"/> is <see langword="true"/>, otherwise <paramref name="a"/>.
