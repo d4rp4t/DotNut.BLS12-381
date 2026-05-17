@@ -18,4 +18,10 @@
         <ProjectReference Include="..\DotNut.BLS12-381\DotNut.BLS12-381.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <None Include="ZkCryptoVectors\VectorFiles\*.dat">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
 </Project>
