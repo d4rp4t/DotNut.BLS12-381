@@ -28,8 +28,8 @@ public readonly partial struct G1Affine(Fp x, Fp y, bool isInfinity = false)
     /// This point has prime order r and is in the correct G1 subgroup.
     /// </summary>
     public static readonly G1Affine Generator = new(
-        ParseFpHex("17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb"),
-        ParseFpHex("08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1")
+        Fp.ParseHex("17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb"),
+        Fp.ParseHex("08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1")
     );
 
     /// <summary>
@@ -109,16 +109,4 @@ public readonly partial struct G1Affine(Fp x, Fp y, bool isInfinity = false)
     );
 
     private static readonly Fp CurveB = Fp.Add(Fp.Add(Fp.One, Fp.One), Fp.Add(Fp.One, Fp.One));
-
-    /// <summary>
-    /// Parses a 48-byte (96 hex-char) big-endian Fp value from hex for use in the generator constant.
-    /// </summary>
-    /// <exception cref="ArgumentException">Thrown if <paramref name="hex"/> is not exactly 96 characters.</exception>
-    private static Fp ParseFpHex(string hex)
-    {
-        if (hex.Length != 96) throw new ArgumentException("Fp hex must be 96 chars.", nameof(hex));
-        var bytes = Convert.FromHexString(hex);
-        return Fp.FromBytesBigEndian(bytes);
-    }
-    
 }

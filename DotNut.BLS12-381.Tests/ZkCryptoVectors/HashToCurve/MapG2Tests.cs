@@ -6,7 +6,7 @@ namespace DotNut.BLS12_381.Tests.ZkCryptoVectors.HashToCurve;
 
 public class MapG2Tests
 {
-    private static Fp P_M1_OVER2 => FpTestConstants.P_M1_OVER2;
+    private static Fp P_M1_OVER2 => TestConstants.P_M1_OVER2;
 
     bool check_g2_prime(G2Projective pt)
     {

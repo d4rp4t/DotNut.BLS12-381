@@ -15,30 +15,25 @@ public class Fp2Tests
         Assert.Equal(Fp2.ConditionalSelect(0, a, b), b);
     }
 
-    public static IEnumerable<object[]> Fp2TestData()
+    public static TheoryData<Fp2, Fp2, bool> Fp2TestData() => new()
     {
-        yield return new object[]
         {
             new Fp2(new Fp([1, 2, 3, 4, 5, 6]), new Fp([7, 8, 9, 10, 11, 12])),
             new Fp2(new Fp([1, 2, 3, 4, 5, 6]), new Fp([7, 8, 9, 10, 11, 12])),
-            true,
-        };
-
-        yield return new object[]
+            true
+        },
         {
             new Fp2(new Fp([2, 2, 3, 4, 5, 6]), new Fp([7, 8, 9, 10, 11, 12])),
             new Fp2(new Fp([1, 2, 3, 4, 5, 6]), new Fp([7, 8, 9, 10, 11, 12])),
-            false,
-        };
-
-        yield return new object[]
+            false
+        },
         {
             new Fp2(new Fp([1, 2, 3, 4, 5, 6]), new Fp([2, 8, 9, 10, 11, 12])),
             new Fp2(new Fp([1, 2, 3, 4, 5, 6]), new Fp([7, 8, 9, 10, 11, 12])),
-            false,
-        };
-    }
-
+            false
+        }
+    };
+    
     [Theory]
     [MemberData(nameof(Fp2TestData))]
     public void test_equality(Fp2 a, Fp2 b, bool expected)

@@ -67,29 +67,24 @@ public class ScalarTests
             Scalar.ToHexString(R2));
     }
 
-    public static IEnumerable<object[]> EqTestData()
+    public static TheoryData<Scalar, Scalar, bool> EqTestData() => new()
     {
-        yield return new object[]
         {
             Scalar.Zero, Scalar.Zero, true
-        };
-        yield return new object[]
+        },
         {
             Scalar.One, Scalar.One, true
-        };
-        yield return new object[]
+        },
         {
             R2, R2, true
-        };
-        yield return new object[]
+        },
         {
             Scalar.Zero, Scalar.One, false
-        };
-        yield return new object[]
+        },
         {
             Scalar.One, Scalar.R2, false
-        };
-    }
+        }
+    };
     [Theory]
     [MemberData(nameof(EqTestData))]
     public void test_equality(Scalar a, Scalar b, bool shouldEq)

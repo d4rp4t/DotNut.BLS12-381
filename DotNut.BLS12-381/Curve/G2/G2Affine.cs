@@ -29,12 +29,12 @@ public readonly partial struct G2Affine(Fp2 x, Fp2 y, bool isInfinity = false)
     /// </summary>
     public static readonly G2Affine Generator = new(
         new Fp2(
-            ParseFpHex("024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8"),
-            ParseFpHex("13e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e")
+            Fp.ParseHex("024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8"),
+            Fp.ParseHex("13e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e")
         ),
         new Fp2(
-            ParseFpHex("0ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801"),
-            ParseFpHex("0606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be")
+            Fp.ParseHex("0ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801"),
+            Fp.ParseHex("0606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be")
         )
     );
 
@@ -106,14 +106,4 @@ public readonly partial struct G2Affine(Fp2 x, Fp2 y, bool isInfinity = false)
     public override bool Equals(object? obj) => obj is G2Affine other && this == other;
 
     public override int GetHashCode() => HashCode.Combine(X, Y, IsInfinity);
-
-    /// <summary>
-    /// Parses a 48-byte (96 hex-char) big-endian Fp value from hex for use in the generator constant.
-    /// </summary>
-    /// <exception cref="ArgumentException">Thrown if <paramref name="hex"/> is not exactly 96 characters.</exception>
-    private static Fp ParseFpHex(string hex)
-    {
-        if (hex.Length != 96) throw new ArgumentException("Fp hex must be 96 chars.", nameof(hex));
-        return Fp.FromBytesBigEndian(Convert.FromHexString(hex));
-    }
 }

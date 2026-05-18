@@ -2,8 +2,11 @@ using DotNut.BLS12_381.Tower;
 
 namespace DotNut.BLS12_381.Tests.ZkCryptoVectors.HashToCurve;
 
-internal static class FpTestConstants
+internal static class TestConstants
 {
+    internal static string Q128 = $"q128_{new string('q', 128)}";
+    internal static string A512 = $"a512_{new string('a', 512)}";
+    
     // (p-1)/2 — used to test sgn0 in both MapG1Tests and MapG2Tests
     internal static readonly Fp P_M1_OVER2 = new([
         0xa1fa_ffff_fffe_5557,

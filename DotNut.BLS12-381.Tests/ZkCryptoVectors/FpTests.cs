@@ -16,57 +16,49 @@ public class FpTests
         Assert.Equal(a, Fp.ConditionalSelect(1, a, b));
     }
 
-    public static IEnumerable<object[]> FpTestData()
+    public static TheoryData<ulong[], ulong[], bool> FpTestData() => new()
     {
-        yield return new object[]
         {
-            new ulong[] { 1, 2, 3, 4, 5, 6 },
-            new ulong[] { 1, 2, 3, 4, 5, 6 },
-            true,
-        };
-        yield return new object[]
+            [1, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            true
+        },
         {
-            new ulong[] { 7, 2, 3, 4, 5, 6 },
-            new ulong[] { 1, 2, 3, 4, 5, 6 },
-            false,
-        };
-        yield return new object[]
+            [7, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            false
+        },
         {
-            new ulong[] { 7, 2, 3, 4, 5, 6 },
-            new ulong[] { 1, 2, 3, 4, 5, 6 },
-            false,
-        };
-        yield return new object[]
+            [7, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            false
+        },
         {
-            new ulong[] { 1, 7, 3, 4, 5, 6 },
-            new ulong[] { 1, 2, 3, 4, 5, 6 },
-            false,
-        };
-        yield return new object[]
+            [1, 7, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            false
+        },
         {
-            new ulong[] { 1, 2, 7, 4, 5, 6 },
-            new ulong[] { 1, 2, 3, 4, 5, 6 },
-            false,
-        };
-        yield return new object[]
+            [1, 2, 7, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            false
+        },
         {
-            new ulong[] { 1, 2, 3, 7, 5, 6 },
-            new ulong[] { 1, 2, 3, 4, 5, 6 },
-            false,
-        };
-        yield return new object[]
+            [1, 2, 3, 7, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            false
+        },
         {
-            new ulong[] { 1, 2, 3, 4, 7, 6 },
-            new ulong[] { 1, 2, 3, 4, 5, 6 },
-            false,
-        };
-        yield return new object[]
+            [1, 2, 3, 4, 7, 6],
+            [1, 2, 3, 4, 5, 6],
+            false
+        },
         {
-            new ulong[] { 1, 2, 3, 4, 5, 7 },
-            new ulong[] { 1, 2, 3, 4, 5, 6 },
-            false,
-        };
-    }
+            [1, 2, 3, 4, 5, 7],
+            [1, 2, 3, 4, 5, 6],
+            false
+        }
+    };
 
     [Theory]
     [MemberData(nameof(FpTestData))]

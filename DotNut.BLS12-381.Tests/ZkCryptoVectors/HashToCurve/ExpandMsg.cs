@@ -1,12 +1,10 @@
 using System.Security.Cryptography;
 using System.Text;
 using DotNut.BLS12_381.HashToCurve;
+using DotNut.BLS12_381.Tests.ZkCryptoVectors.HashToCurve;
 
 public class ExpandMsg
 {
-    private static string _q128 = $"q128_{new string('q', 128)}";
-    private static string _a512 = $"a512_{new string('a', 512)}";
-    
     [Fact]
     public void test_expand_message_parts()
     {
@@ -42,12 +40,12 @@ public class ExpandMsg
                 "eff31487c770a893cfb36f912fbfcbff40d5661771ca4b2cb4eafe524333f5c1"
             },
             {
-                _q128,
+                TestConstants.Q128,
                 0x20,
                 "b23a1d2b4d97b2ef7785562a7e8bac7eed54ed6e97e29aa51bfe3f12ddad1ff9"
             },
             {
-                _a512,
+                TestConstants.A512,
                 0x20,
                 "4623227bcc01293b8c130bf771da8c298dede7383243dc0993d2d94823958c4c"
             },
@@ -67,12 +65,12 @@ public class ExpandMsg
                 "ef904a29bffc4cf9ee82832451c946ac3c8f8058ae97d8d629831a74c6572bd9ebd0df635cd1f208e2038e760c4994984ce73f0d55ea9f22af83ba4734569d4bc95e18350f740c07eef653cbb9f87910d833751825f0ebefa1abe5420bb52be14cf489b37fe1a72f7de2d10be453b2c9d9eb20c7e3f6edc5a60629178d9478df"
             },
             {
-                _q128,
+                TestConstants.Q128,
                 0x80,
                 "80be107d0884f0d881bb460322f0443d38bd222db8bd0b0a5312a6fedb49c1bbd88fd75d8b9a09486c60123dfa1d73c1cc3169761b17476d3c6b7cbbd727acd0e2c942f4dd96ae3da5de368d26b32286e32de7e5a8cb2949f866a0b80c58116b29fa7fabb3ea7d520ee603e0c25bcaf0b9a5e92ec6a1fe4e0391d1cdbce8c68a"
             },
             {
-                _a512,
+                TestConstants.A512,
                 0x80,
                 "546aff5444b5b79aa6148bd81728704c32decb73a3ba76e9e75885cad9def1d06d6792f8a7d12794e90efed817d96920d728896a4510864370c207f99bd4a608ea121700ef01ed879745ee3e4ceef777eda6d9e5e38b90c86ea6fb0b36504ba4a45d22e86f6db5dd43d98a294bebb9125d5b794e9d2a81181066eb954966a487"
             },
@@ -106,12 +104,12 @@ public class ExpandMsg
                 "35387dcf22618f3728e6c686490f8b431f76550b0b2c61cbc1ce7001536f4521"
             },
             {
-                _q128,
+                TestConstants.Q128,
                 0x20,
                 "01b637612bb18e840028be900a833a74414140dde0c4754c198532c3a0ba42bc"
             },
             {
-                _a512,
+                TestConstants.A512,
                 0x20,
                 "20cce7033cabc5460743180be6fa8aac5a103f56d481cf369a8accc0c374431b"
             },
@@ -143,7 +141,7 @@ public class ExpandMsg
                     + "bdc37054ba96ecb9dbd666417e3de289d4f424f502a982"
             },
             {
-                _q128,
+                TestConstants.Q128,
                 0x80,
                 "ed6e8c036df90111410431431a232d41a32c86e296c05d42"
                     + "6e5f44e75b9a50d335b2412bc6c91e0a6dc131de09c43110d9180d"
@@ -152,7 +150,7 @@ public class ExpandMsg
                     + "04ca0356548bc6e703fca02ab521b505e8e45600508d32"
             },
             {
-                _a512,
+                TestConstants.A512,
                 0x80,
                 "78b53f2413f3c688f07732c10e5ced29a17c6a16f717179f"
                     + "fbe38d92d6c9ec296502eb9889af83a1928cd162e845b0d3c5424e"
@@ -191,12 +189,12 @@ public class ExpandMsg
                 "087e45a86e2939ee8b91100af1583c4938e0f5fc6c9db4b107b83346bc967f58"
             },
             {
-                _q128,
+                TestConstants.Q128,
                 0x20,
                 "7336234ee9983902440f6bc35b348352013becd88938d2afec44311caf8356b3"
             },
             {
-                _a512,
+                TestConstants.A512,
                 0x20,
                 "57b5f7e766d5be68a6bfe1768e3c2b7f1228b3e4b3134956dd73a59b954c66f4"
             },
@@ -228,7 +226,7 @@ public class ExpandMsg
                     + "0d35c3f1023d64ad1407924288d366ea159f46287e61ac"
             },
             {
-                _q128,
+                TestConstants.Q128,
                 0x80,
                 "b799b045a58c8d2b4334cf54b78260b45eec544f9f2fb5bd"
                     + "12fb603eaee70db7317bf807c406e26373922b7b8920fa29142703"
@@ -237,7 +235,7 @@ public class ExpandMsg
                     + "a1422949471d267b21bc88e688e4014087a0b592b695ed"
             },
             {
-                _a512,
+                TestConstants.A512,
                 0x80,
                 "05b0bfef265dcee87654372777b7c44177e2ae4c13a27f10"
                     + "3340d9cd11c86cb2426ffcad5bd964080c2aee97f03be1ca18e30a"
@@ -275,12 +273,12 @@ public class ExpandMsg
                 "912c58deac4821c3509dbefa094df54b34b8f5d01a191d1d3108a2c89077acca"
             },
             {
-                _q128,
+                TestConstants.Q128,
                 0x20,
                 "1adbcc448aef2a0cebc71dac9f756b22e51839d348e031e63b33ebb50faeaf3f"
             },
             {
-                _a512,
+                TestConstants.A512,
                 0x20,
                 "df3447cc5f3e9a77da10f819218ddf31342c310778e0e4ef72bbaecee786a4fe"
             },
@@ -312,7 +310,7 @@ public class ExpandMsg
                     + "790a3a5aecd9d14be79f9fd4fb180960a3772e08680495"
             },
             {
-                _q128,
+                TestConstants.Q128,
                 0x80,
                 "ca1b56861482b16eae0f4a26212112362fcc2d76dcc80c93"
                     + "c4182ed66c5113fe41733ed68be2942a3487394317f3379856f482"
@@ -321,7 +319,7 @@ public class ExpandMsg
                     + "0eb6eace575bf3dc9806e7c4016bd50f3c0e2a6481ee6d"
             },
             {
-                _a512,
+                TestConstants.A512,
                 0x80,
                 "9d763a5ce58f65c91531b4100c7266d479a5d9777ba76169"
                     + "3d052acd37d149e7ac91c796a10b919cd74a591a1e38719fb91b72"
@@ -359,12 +357,12 @@ public class ExpandMsg
                 "979e3a15064afbbcf99f62cc09fa9c85028afcf3f825eb0711894dcfc2f57057"
             },
             {
-                _q128,
+                TestConstants.Q128,
                 0x20,
                 "c5a9220962d9edc212c063f4f65b609755a1ed96e62f9db5d1fd6adb5a8dc52b"
             },
             {
-                _a512,
+                TestConstants.A512,
                 0x20,
                 "f7b96a5901af5d78ce1d071d9c383cac66a1dfadb508300ec6aeaea0d62d5d62"
             },
@@ -396,7 +394,7 @@ public class ExpandMsg
                     + "8dd37d3a85a8b82375aee4fa0e909f9763319b55778e71"
             },
             {
-                _q128,
+                TestConstants.Q128,
                 0x80,
                 "19fdd2639f082e31c77717ac9bb032a22ff0958382b2dbb3"
                     + "9020cdc78f0da43305414806abf9a561cb2d0067eb2f7bc544482f"
@@ -405,7 +403,7 @@ public class ExpandMsg
                     + "ccd2f4fc05eb7cb2c019c35d5398b85adc676da4238bc7"
             },
             {
-                _a512,
+                TestConstants.A512,
                 0x80,
                 "945373f0b3431a103333ba6a0a34f1efab2702efde41754c"
                     + "4cb1d5216d5b0a92a67458d968562bde7fa6310a83f53dda138368"
@@ -444,12 +442,12 @@ public class ExpandMsg
                 "245389cf44a13f0e70af8665fe5337ec2dcd138890bb7901c4ad9cfceb054b65"
             },
             {
-                _q128,
+                TestConstants.Q128,
                 0x20,
                 "719b3911821e6428a5ed9b8e600f2866bcf23c8f0515e52d" + "6c6c019a03f16f0e"
             },
             {
-                _a512,
+                TestConstants.A512,
                 0x20,
                 "9181ead5220b1963f1b5951f35547a5ea86a820562287d6ca4723633d17ccbbc"
             },
@@ -481,7 +479,7 @@ public class ExpandMsg
                     + "1505565b2eb6c90e31c48798ecdc71a71756a9110ff373"
             },
             {
-                _q128,
+                TestConstants.Q128,
                 0x80,
                 "4ac054dda0a38a65d0ecf7afd3c2812300027c8789655e47"
                     + "aecf1ecc1a2426b17444c7482c99e5907afd9c25b991990490bb9c"
@@ -490,7 +488,7 @@ public class ExpandMsg
                     + "8c3cfa42857b3d130188571943a7bd747de831bd6444e0"
             },
             {
-                _a512,
+                TestConstants.A512,
                 0x80,
                 "09afc76d51c2cccbc129c2315df66c2be7295a231203b8ab"
                     + "2dd7f95c2772c68e500bc72e20c602abc9964663b7a03a389be128"

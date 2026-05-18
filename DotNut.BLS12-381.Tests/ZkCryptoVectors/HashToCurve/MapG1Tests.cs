@@ -211,7 +211,7 @@ public class MapG1Tests
     [Fact]
     public void test_sgn0()
     {
-        var p = FpTestConstants.P_M1_OVER2;
+        var p = TestConstants.P_M1_OVER2;
         Assert.Equal(0UL, Fp.Sgn0(Fp.Zero));
         Assert.Equal(1UL, Fp.Sgn0(Fp.One));
         Assert.Equal(0UL, Fp.Sgn0(Fp.Negate(Fp.One)));
@@ -221,7 +221,7 @@ public class MapG1Tests
         var pP1Over2 = Fp.Add(p, Fp.One);
         Assert.Equal(0UL, Fp.Sgn0(pP1Over2));
 
-        var negPP1Over2 = Fp.Negate(pP1Over2);
-        Assert.Equal(negPP1Over2, p);
+        var NegPP1Over2 = Fp.Negate(pP1Over2);
+        Assert.Equal(NegPP1Over2, p);
     }
 }

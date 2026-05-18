@@ -9,10 +9,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="BLS\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <InternalsVisibleTo Include="DotNut.BLS12-381.Tests" />
     </ItemGroup>
 
