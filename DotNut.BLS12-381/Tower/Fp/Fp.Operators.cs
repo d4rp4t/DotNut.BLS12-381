@@ -23,7 +23,10 @@ public readonly partial struct Fp
     }
     
     public static bool operator ==(Fp a, Fp b) => Equal(a, b);
-
     public static bool operator !=(Fp a, Fp b) => !Equal(a, b);
-    
+
+    public static bool operator <(Fp a, Fp b) => Compare(a, b) < 0;
+    public static bool operator >(Fp a, Fp b) => Compare(a, b) > 0;
+    public static bool operator <=(Fp a, Fp b) => Compare(a, b) <= 0;
+    public static bool operator >=(Fp a, Fp b) => Compare(a, b) >= 0;
 }

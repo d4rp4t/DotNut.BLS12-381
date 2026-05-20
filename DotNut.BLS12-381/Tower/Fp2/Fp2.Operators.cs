@@ -22,9 +22,11 @@ public readonly partial struct Fp2
         return Fp2.Multiply(p, q);
     }
     
-    /// <summary>Equality operator; delegates to <see cref="Equal"/>.</summary>
     public static bool operator ==(Fp2 a, Fp2 b) => Equal(a, b);
-
-    /// <summary>Inequality operator; delegates to <see cref="Equal"/>.</summary>
     public static bool operator !=(Fp2 a, Fp2 b) => !Equal(a, b);
+
+    public static bool operator <(Fp2 a, Fp2 b) => Compare(a, b) < 0;
+    public static bool operator >(Fp2 a, Fp2 b) => Compare(a, b) > 0;
+    public static bool operator <=(Fp2 a, Fp2 b) => Compare(a, b) <= 0;
+    public static bool operator >=(Fp2 a, Fp2 b) => Compare(a, b) >= 0;
 }

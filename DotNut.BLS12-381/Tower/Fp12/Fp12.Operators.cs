@@ -22,9 +22,11 @@ public readonly partial struct Fp12
         return Fp12.Multiply(p, q);
     }
     
-    /// <summary>Equality operator; delegates to <see cref="Equal"/>.</summary>
     public static bool operator ==(Fp12 a, Fp12 b) => Equal(a, b);
-
-    /// <summary>Inequality operator; delegates to <see cref="Equal"/>.</summary>
     public static bool operator !=(Fp12 a, Fp12 b) => !Equal(a, b);
+
+    public static bool operator <(Fp12 a, Fp12 b) => Compare(a, b) < 0;
+    public static bool operator >(Fp12 a, Fp12 b) => Compare(a, b) > 0;
+    public static bool operator <=(Fp12 a, Fp12 b) => Compare(a, b) <= 0;
+    public static bool operator >=(Fp12 a, Fp12 b) => Compare(a, b) >= 0;
 }

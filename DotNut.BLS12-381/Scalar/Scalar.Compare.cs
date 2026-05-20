@@ -44,11 +44,7 @@ public readonly partial struct Scalar
         return (int)gt - (int)lt;
     }
     
-    /// <summary>Equality operator; delegates to <see cref="Equal"/> (constant-time).</summary>
-    public static bool operator ==(Scalar a, Scalar b) => Equal(a, b);
 
-    /// <summary>Inequality operator; delegates to <see cref="Equal"/> (constant-time).</summary>
-    public static bool operator !=(Scalar a, Scalar b) => !Equal(a, b);
 
     /// <inheritdoc cref="Equal"/>
     public override bool Equals(object? obj) => obj is Scalar other && Equal(this, other);
