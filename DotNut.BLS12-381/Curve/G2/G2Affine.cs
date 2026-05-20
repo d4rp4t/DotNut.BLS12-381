@@ -94,15 +94,6 @@ public readonly partial struct G2Affine(Fp2 x, Fp2 y, bool isInfinity = false)
         p.IsInfinity
     );
 
-    public static bool operator ==(G2Affine a, G2Affine b)
-    {
-        if (a.IsInfinity && b.IsInfinity) return true;
-        if (a.IsInfinity || b.IsInfinity) return false;
-        return Fp2.Equal(a.X, b.X) && Fp2.Equal(a.Y, b.Y);
-    }
-
-    public static bool operator !=(G2Affine a, G2Affine b) => !(a == b);
-
     public override bool Equals(object? obj) => obj is G2Affine other && this == other;
 
     public override int GetHashCode() => HashCode.Combine(X, Y, IsInfinity);

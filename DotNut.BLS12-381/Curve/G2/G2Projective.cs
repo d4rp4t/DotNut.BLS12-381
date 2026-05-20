@@ -12,7 +12,7 @@ namespace DotNut.BLS12_381.Curve.G2;
 /// Arithmetic uses Algorithm 7 (complete addition) and Algorithm 9 (doubling) from
 /// https://eprint.iacr.org/2015/1060.pdf.
 /// </summary>
-public readonly struct G2Projective(Fp2 x, Fp2 y, Fp2 z)
+public readonly partial struct G2Projective(Fp2 x, Fp2 y, Fp2 z)
 {
     /// <summary>Projective X coordinate; each Fp component in Montgomery form.</summary>
     public Fp2 X { get; } = x;
@@ -285,21 +285,6 @@ public readonly struct G2Projective(Fp2 x, Fp2 y, Fp2 z)
 
         return result;
     }
-
-    /// <summary>
-    /// Projective equivalence: (X1:Y1:Z1) == (X2:Y2:Z2) iff X1·Z2 = X2·Z1 and Y1·Z2 = Y2·Z1.
-    /// Both points at infinity are equal.
-    /// </summary>
-    public static bool operator ==(G2Projective a, G2Projective b)
-    {
-        bool aInf = a.IsInfinity, bInf = b.IsInfinity;
-        if (aInf && bInf) return true;
-        if (aInf || bInf) return false;
-        return Fp2.Equal(Fp2.Multiply(a.X, b.Z), Fp2.Multiply(b.X, a.Z))
-            && Fp2.Equal(Fp2.Multiply(a.Y, b.Z), Fp2.Multiply(b.Y, a.Z));
-    }
-
-    public static bool operator !=(G2Projective a, G2Projective b) => !(a == b);
 
     public override bool Equals(object? obj) => obj is G2Projective other && this == other;
 

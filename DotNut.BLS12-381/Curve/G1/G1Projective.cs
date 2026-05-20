@@ -9,7 +9,7 @@ namespace DotNut.BLS12_381.Curve.G1;
 /// Arithmetic uses Algorithm 7 (compvare addition) and Algorithm 9 (doubling) from
 /// https://eprint.iacr.org/2015/1060.pdf.
 /// </summary>
-public readonly struct G1Projective(Fp x, Fp y, Fp z)
+public readonly partial struct G1Projective(Fp x, Fp y, Fp z)
 {
     /// <summary>Projective X coordinate in Montgomery form.</summary>
     public Fp X { get; } = x;
@@ -229,20 +229,6 @@ public readonly struct G1Projective(Fp x, Fp y, Fp z)
     /// <summary>Returns P − Q as P + (−Q).</summary>
     public static G1Projective Subtract(G1Affine a, G1Projective b) => Add(G1Affine.Negate(a), b);
     
-    /// <summary>
-    /// Projective equivalence: (X1:Y1:Z1) == (X2:Y2:Z2) iff X1·Z2 = X2·Z1 and Y1·Z2 = Y2·Z1.
-    /// Both points at infinity are equal.
-    /// </summary>
-    public static bool operator ==(G1Projective a, G1Projective b)
-    {
-        bool aInf = a.IsInfinity, bInf = b.IsInfinity;
-        if (aInf && bInf) return true;
-        if (aInf || bInf) return false;
-        return Fp.Equal(Fp.Multiply(a.X, b.Z), Fp.Multiply(b.X, a.Z))
-            && Fp.Equal(Fp.Multiply(a.Y, b.Z), Fp.Multiply(b.Y, a.Z));
-    }
-
-    public static bool operator !=(G1Projective a, G1Projective b) => !(a == b);
 
     public override bool Equals(object? obj) => obj is G1Projective other && this == other;
 

@@ -76,15 +76,6 @@ public readonly partial struct G1Affine(Fp x, Fp y, bool isInfinity = false)
         0x051b_a4ab_241b_6160,
     ]);
 
-    public static bool operator ==(G1Affine a, G1Affine b)
-    {
-        if (a.IsInfinity && b.IsInfinity) return true;
-        if (a.IsInfinity || b.IsInfinity) return false;
-        return Fp.Equal(a.X, b.X) && Fp.Equal(a.Y, b.Y);
-    }
-
-    public static bool operator !=(G1Affine a, G1Affine b) => !(a == b);
-
     public override bool Equals(object? obj) => obj is G1Affine other && this == other;
 
     public override int GetHashCode() => HashCode.Combine(X, Y, IsInfinity);
