@@ -25,12 +25,6 @@ public readonly partial struct Fp12
                & Fp6.Equal(a.C1, b.C1);
     }
 
-    /// <summary>Equality operator; delegates to <see cref="Equal"/>.</summary>
-    public static bool operator ==(Fp12 a, Fp12 b) => Equal(a, b);
-
-    /// <summary>Inequality operator; delegates to <see cref="Equal"/>.</summary>
-    public static bool operator !=(Fp12 a, Fp12 b) => !Equal(a, b);
-
     /// <inheritdoc cref="Equal"/>
     public override bool Equals(object? obj)
     {

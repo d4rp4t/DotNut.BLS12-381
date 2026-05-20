@@ -1,6 +1,6 @@
 namespace DotNut.BLS12_381.HashToCurve;
 
-public static partial class HashToCurveMapper
+internal static partial class HashToCurveMapper
 {
     internal static Scalar ScalarFromOkm(ReadOnlySpan<byte> okm)
     {

@@ -12,7 +12,7 @@ namespace DotNut.BLS12_381;
 public readonly partial struct Scalar
 {
     /// <summary>Limb 0 (least significant 64 bits) of the scalar in Montgomery form.</summary>
-    public readonly ulong L0, L1, L2, L3;
+    internal readonly ulong L0, L1, L2, L3;
     
     /// <summary>
     /// Creates a scalar from its four little-endian 64-bit limbs.
@@ -24,7 +24,7 @@ public readonly partial struct Scalar
     /// <param name="l1">Second limb.</param>
     /// <param name="l2">Third limb.</param>
     /// <param name="l3">Most-significant limb.</param>
-    public Scalar(ulong l0, ulong l1, ulong l2, ulong l3)
+    internal Scalar(ulong l0, ulong l1, ulong l2, ulong l3)
     {
         L0 = l0;
         L1 = l1;
@@ -32,7 +32,7 @@ public readonly partial struct Scalar
         L3 = l3;
     }
 
-    public Scalar(ulong[] l5)
+    internal Scalar(ulong[] l5)
     {
         L0 = l5[0];
         L1 = l5[1];

@@ -2,7 +2,7 @@ using DotNut.BLS12_381.Tower;
 
 namespace DotNut.BLS12_381.HashToCurve;
 
-public static partial class HashToCurveMapper
+internal static partial class HashToCurveMapper
 {
     // 2^256 mod p, stored in Montgomery form — matches Rust from_raw_unchecked constant.
     private static readonly Fp F2_256 = new Fp(

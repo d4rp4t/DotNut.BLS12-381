@@ -3,7 +3,7 @@ using DotNut.BLS12_381.Tower;
 
 namespace DotNut.BLS12_381.HashToCurve;
 
-public static partial class HashToCurveMapper
+internal static partial class HashToCurveMapper
 {
     private static Fp2[] ISO3_XNUM = [
         new Fp2(

@@ -100,7 +100,7 @@ public readonly partial struct Fp
     /// <summary>
     /// Converts a canonical field element into Montgomery form.
     /// </summary>
-    public static Fp FromCanonical(Fp canonical) => MontgomeryReduce(MultiplyWide(canonical, MontgomeryR2));
+    internal static Fp FromCanonical(Fp canonical) => MontgomeryReduce(MultiplyWide(canonical, MontgomeryR2));
 
     /// <summary>
     /// Converts a Montgomery-form element into canonical representation.

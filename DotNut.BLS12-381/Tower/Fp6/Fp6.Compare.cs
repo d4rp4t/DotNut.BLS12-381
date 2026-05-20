@@ -30,12 +30,6 @@ public readonly partial struct Fp6
                & Fp2.Equal(a.C2, b.C2);
     }
 
-    /// <summary>Equality operator; delegates to <see cref="Equal"/>.</summary>
-    public static bool operator ==(Fp6 a, Fp6 b) => Equal(a, b);
-
-    /// <summary>Inequality operator; delegates to <see cref="Equal"/>.</summary>
-    public static bool operator !=(Fp6 a, Fp6 b) => !Equal(a, b);
-
     /// <inheritdoc cref="Equal"/>
     public override bool Equals(object? obj)
     {

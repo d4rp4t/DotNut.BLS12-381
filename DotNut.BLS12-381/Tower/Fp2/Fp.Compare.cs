@@ -34,11 +34,7 @@ public readonly partial struct Fp2
                & Fp.Equal(a.C1, b.C1);
     }
 
-    /// <summary>Equality operator; delegates to <see cref="Equal"/>.</summary>
-    public static bool operator ==(Fp2 a, Fp2 b) => Equal(a, b);
 
-    /// <summary>Inequality operator; delegates to <see cref="Equal"/>.</summary>
-    public static bool operator !=(Fp2 a, Fp2 b) => !Equal(a, b);
 
     /// <inheritdoc cref="Equal"/>
     public override bool Equals(object? obj)

@@ -210,6 +210,17 @@ public readonly partial struct Fp
                $"{tmp.L1:x16}" +
                $"{tmp.L0:x16}";
     }
+    
+    /// <summary>
+    /// Parses a 48-byte (96 hex-char) big-endian Fp value from hex for use in the generator constant.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="hex"/> is not exactly 96 characters.</exception>
+    public static Fp ParseHex(string hex)
+    {
+        if (hex.Length != 96) throw new ArgumentException("Fp hex must be 96 chars.", nameof(hex));
+        var bytes = Convert.FromHexString(hex);
+        return Fp.FromBytesBigEndian(bytes);
+    }
 
     /// <summary>
     /// Determines whether one canonical <see cref="Fp"/> value is greater than

@@ -81,7 +81,7 @@ public readonly partial struct Fp12
     /// <param name="c1">Non-zero Fp2 coefficient at position 1.</param>
     /// <param name="c4">Non-zero Fp2 coefficient at position 4.</param>
     /// <returns>f · sparse in Montgomery form.</returns>
-    public static Fp12 MulBy014(Fp12 f, Fp2 c0, Fp2 c1, Fp2 c4)
+    internal static Fp12 MulBy014(Fp12 f, Fp2 c0, Fp2 c1, Fp2 c4)
     {
         var aa = Fp6.MulBy01(f.C0, c0, c1);
         var bb = Fp6.MulBy1(f.C1, c4);
@@ -170,7 +170,7 @@ public readonly partial struct Fp12
     /// The z-variable mapping follows the zkcrypto convention:
     /// z0=C0.C0, z4=C0.C1, z3=C0.C2, z2=C1.C0, z1=C1.C1, z5=C1.C2.
     /// </remarks>
-    public static Fp12 CyclotomicSquare(Fp12 f)
+    internal static Fp12 CyclotomicSquare(Fp12 f)
     {
         // Algorithm 5.5.4 - only correct for elements in the cyclotomic subgroup
         // z-variable mapping from zkcrypto: z0=C0.C0, z4=C0.C1, z3=C0.C2, z2=C1.C0, z1=C1.C1, z5=C1.C2
@@ -214,7 +214,7 @@ public readonly partial struct Fp12
     /// </summary>
     /// <param name="a">Base element in the cyclotomic subgroup, in Montgomery form.</param>
     /// <param name="exponent">Non-negative exponent; negative values throw <see cref="ArgumentOutOfRangeException"/>.</param>
-    public static Fp12 CyclotomicExp(Fp12 a, System.Numerics.BigInteger exponent)
+    internal static Fp12 CyclotomicExp(Fp12 a, System.Numerics.BigInteger exponent)
     {
         if (exponent.Sign < 0) throw new ArgumentOutOfRangeException(nameof(exponent));
         var result = One;

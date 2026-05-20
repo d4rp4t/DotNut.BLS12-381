@@ -6,7 +6,7 @@ namespace DotNut.BLS12_381.HashToCurve;
 /// Addition-chain exponentiation helpers for the BLS12-381 base field and its degree-2 extension.
 /// These methods are generated optimal addition chains that avoid general-purpose square-and-multiply loops.
 /// </summary>
-public static class AdditionChains
+internal static class AdditionChains
 {
     /// <summary>
     /// Computes var0^((p − 3) / 4) in Fp using a hand-optimized addition chain.
@@ -17,7 +17,7 @@ public static class AdditionChains
     /// </summary>
     /// <param name="var0">Field element in Montgomery form.</param>
     /// <returns>var0^((p−3)/4) in Montgomery form.</returns>
-    public static Fp Pm3Div4(Fp var0)
+    internal static Fp Pm3Div4(Fp var0)
     {
         // 0 : 2 
         Fp var1 = Fp.Square(var0);
@@ -331,7 +331,7 @@ public static class AdditionChains
     /// </summary>
     /// <param name="var0">Fp2 element in Montgomery form.</param>
     /// <returns>var0^((p²−9)/16) in Montgomery form.</returns>
-    public static Fp2 P2M9Div16(Fp2 var0) { 
+    internal static Fp2 P2M9Div16(Fp2 var0) { 
         //    0 : 2  
         Fp2 var1 = Fp2.Square(var0); 
         //    1 : 3 

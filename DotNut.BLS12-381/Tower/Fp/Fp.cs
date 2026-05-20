@@ -15,7 +15,7 @@ public readonly partial struct Fp
     // SHOULD be in montgomery domain, OR you'll have to use Fp.FromCanonical. Math won't work on canonical form. 
     // i'd rather not use these ctors until explictly needed
     
-    public Fp(ulong l0, ulong l1, ulong l2, ulong l3, ulong l4, ulong l5)
+    internal Fp(ulong l0, ulong l1, ulong l2, ulong l3, ulong l4, ulong l5)
     {
         L0 = l0;
         L1 = l1;
@@ -24,8 +24,8 @@ public readonly partial struct Fp
         L4 = l4;
         L5 = l5;
     }
-    
-    public Fp(ReadOnlySpan<ulong> limbs){
+
+    internal Fp(ReadOnlySpan<ulong> limbs){
         if (limbs.Length < 6)
         {
             throw new ArgumentOutOfRangeException(nameof(limbs), "Fp contains only 6 limbs!");

@@ -26,10 +26,6 @@ public readonly partial struct Fp
     {
         return Compare(a, b) >= 0;
     }
-    
-    public static bool operator ==(Fp a, Fp b) => Equal(a, b);
-
-    public static bool operator !=(Fp a, Fp b) => !Equal(a, b);
 
     public override bool Equals(object? obj)
     {

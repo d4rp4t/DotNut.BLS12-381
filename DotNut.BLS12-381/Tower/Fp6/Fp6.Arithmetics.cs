@@ -67,7 +67,7 @@ public readonly partial struct Fp6
     /// </summary>
     /// <param name="a">Left operand (dense Fp6).</param>
     /// <param name="b1">The non-zero Fp2 coefficient at degree 1.</param>
-    public static Fp6 MulBy1(Fp6 a, Fp2 b1)
+    internal static Fp6 MulBy1(Fp6 a, Fp2 b1)
     {
         return new Fp6(
             Fp2.MultiplyByNonResidue(Fp2.Multiply(a.C2, b1)),
@@ -84,7 +84,7 @@ public readonly partial struct Fp6
     /// <param name="a">Left operand (dense Fp6).</param>
     /// <param name="b0">Non-zero Fp2 coefficient at degree 0.</param>
     /// <param name="b1">Non-zero Fp2 coefficient at degree 1.</param>
-    public static Fp6 MulBy01(Fp6 a, Fp2 b0, Fp2 b1)
+    internal static Fp6 MulBy01(Fp6 a, Fp2 b0, Fp2 b1)
     {
         var aa = Fp2.Multiply(a.C0, b0);
         var bb = Fp2.Multiply(a.C1, b1);

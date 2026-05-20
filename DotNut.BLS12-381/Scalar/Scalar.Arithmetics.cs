@@ -7,7 +7,7 @@ public readonly partial struct Scalar
     /// Converts to canonical form first, then extracts the bit from the appropriate limb.
     /// </summary>
     /// <returns>0 or 1 as a <see cref="ulong"/>.</returns>
-    public ulong GetBit(int i)
+    internal ulong GetBit(int i)
     {
         var c = ToCanonical(this);
         ulong limb = (i >> 6) switch { 0 => c.L0, 1 => c.L1, 2 => c.L2, _ => c.L3 };
@@ -96,7 +96,7 @@ public readonly partial struct Scalar
     /// Converts an integer a in [0, r) to Montgomery form by computing MontgomeryReduce(a · R²) = a·R mod r.
     /// Input raw limbs must represent a canonical integer in [0, r); they are NOT already in Montgomery form.
     /// </summary>
-    public static Scalar FromCanonical(Scalar a) => MontgomeryReduce(MultiplyWide(a, R2));
+    internal static Scalar FromCanonical(Scalar a) => MontgomeryReduce(MultiplyWide(a, R2));
 
     /// <summary>
     /// Converts a scalar from Montgomery form back to its canonical integer in [0, r).
@@ -244,7 +244,7 @@ public readonly partial struct Scalar
     /// Square-and-multiply exponentiation. <paramref name="exp"/> is a little-endian
     /// array of 64-bit limbs; bits are processed from MSB to LSB (variable-time).
     /// </summary>
-    public static Scalar Pow(Scalar value, ReadOnlySpan<ulong> exp)
+    internal static Scalar Pow(Scalar value, ReadOnlySpan<ulong> exp)
     {
         Scalar result = One;
         for (int limb = exp.Length - 1; limb >= 0; limb--)
