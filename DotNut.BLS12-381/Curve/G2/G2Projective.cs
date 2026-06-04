@@ -178,7 +178,10 @@ public readonly partial struct G2Projective(Fp2 x, Fp2 y, Fp2 z)
     /// </summary>
     public G2Affine ToAffine()
     {
-        var zInv = Fp2.Invert(Z);
+        // For the point at infinity (Z=0), substitute One so Invert doesn't throw;
+        // the computed affine coords are discarded by ConditionalSelect anyway.
+        var safeZ = Fp2.ConditionalSelect(Z, Fp2.One, IsInfinity);
+        var zInv = Fp2.Invert(safeZ);
         return G2Affine.ConditionalSelect(
             new G2Affine(Fp2.Multiply(X, zInv), Fp2.Multiply(Y, zInv)),
             G2Affine.Infinity,
