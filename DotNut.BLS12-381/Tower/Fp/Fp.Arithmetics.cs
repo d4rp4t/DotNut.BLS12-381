@@ -30,16 +30,104 @@ public readonly partial struct Fp
 
     /// <summary>
     /// Computes <c>(a × b) mod p</c>.
-    /// </summary>
-    /// <remarks>
     /// Both operands are assumed to be in Montgomery form.
-    /// </remarks>
-    public static Fp Multiply(Fp a, Fp b) => MontgomeryReduce(MultiplyWide(a, b));
+    /// Uses a fully unrolled 6×6 schoolbook multiply to avoid heap allocation.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Fp Multiply(Fp a, Fp b)
+    {
+        ulong c;
+        ulong t0  = CommonMath.Mac(a.L0, b.L0, 0UL, 0UL, out c);
+        ulong t1  = CommonMath.Mac(a.L0, b.L1, 0UL, c,   out c);
+        ulong t2  = CommonMath.Mac(a.L0, b.L2, 0UL, c,   out c);
+        ulong t3  = CommonMath.Mac(a.L0, b.L3, 0UL, c,   out c);
+        ulong t4  = CommonMath.Mac(a.L0, b.L4, 0UL, c,   out c);
+        ulong t5  = CommonMath.Mac(a.L0, b.L5, 0UL, c,   out ulong t6);
+               t1 = CommonMath.Mac(a.L1, b.L0, t1,  0UL, out c);
+               t2 = CommonMath.Mac(a.L1, b.L1, t2,  c,   out c);
+               t3 = CommonMath.Mac(a.L1, b.L2, t3,  c,   out c);
+               t4 = CommonMath.Mac(a.L1, b.L3, t4,  c,   out c);
+               t5 = CommonMath.Mac(a.L1, b.L4, t5,  c,   out c);
+               t6 = CommonMath.Mac(a.L1, b.L5, t6,  c,   out ulong t7);
+               t2 = CommonMath.Mac(a.L2, b.L0, t2,  0UL, out c);
+               t3 = CommonMath.Mac(a.L2, b.L1, t3,  c,   out c);
+               t4 = CommonMath.Mac(a.L2, b.L2, t4,  c,   out c);
+               t5 = CommonMath.Mac(a.L2, b.L3, t5,  c,   out c);
+               t6 = CommonMath.Mac(a.L2, b.L4, t6,  c,   out c);
+               t7 = CommonMath.Mac(a.L2, b.L5, t7,  c,   out ulong t8);
+               t3 = CommonMath.Mac(a.L3, b.L0, t3,  0UL, out c);
+               t4 = CommonMath.Mac(a.L3, b.L1, t4,  c,   out c);
+               t5 = CommonMath.Mac(a.L3, b.L2, t5,  c,   out c);
+               t6 = CommonMath.Mac(a.L3, b.L3, t6,  c,   out c);
+               t7 = CommonMath.Mac(a.L3, b.L4, t7,  c,   out c);
+               t8 = CommonMath.Mac(a.L3, b.L5, t8,  c,   out ulong t9);
+               t4 = CommonMath.Mac(a.L4, b.L0, t4,  0UL, out c);
+               t5 = CommonMath.Mac(a.L4, b.L1, t5,  c,   out c);
+               t6 = CommonMath.Mac(a.L4, b.L2, t6,  c,   out c);
+               t7 = CommonMath.Mac(a.L4, b.L3, t7,  c,   out c);
+               t8 = CommonMath.Mac(a.L4, b.L4, t8,  c,   out c);
+               t9 = CommonMath.Mac(a.L4, b.L5, t9,  c,   out ulong t10);
+               t5 = CommonMath.Mac(a.L5, b.L0, t5,  0UL, out c);
+               t6 = CommonMath.Mac(a.L5, b.L1, t6,  c,   out c);
+               t7 = CommonMath.Mac(a.L5, b.L2, t7,  c,   out c);
+               t8 = CommonMath.Mac(a.L5, b.L3, t8,  c,   out c);
+               t9 = CommonMath.Mac(a.L5, b.L4, t9,  c,   out c);
+              t10 = CommonMath.Mac(a.L5, b.L5, t10, c,   out ulong t11);
+        return MontgomeryReduce(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11);
+    }
 
     /// <summary>
-    /// Computes <c>a^2 mod p</c>.
+    /// Computes <c>a² mod p</c> using the Comba squaring method:
+    /// upper-triangle cross-products, double via bit-shift, add diagonal terms.
+    /// No heap allocation.
     /// </summary>
-    public static Fp Square(Fp a) => MontgomeryReduce(SquareWide(a));
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Fp Square(Fp a)
+    {
+        ulong c;
+        // Phase 1: upper-triangle cross-products a[i]*a[j] for i < j
+        ulong t1  = CommonMath.Mac(a.L0, a.L1, 0UL, 0UL, out c);
+        ulong t2  = CommonMath.Mac(a.L0, a.L2, 0UL, c,   out c);
+        ulong t3  = CommonMath.Mac(a.L0, a.L3, 0UL, c,   out c);
+        ulong t4  = CommonMath.Mac(a.L0, a.L4, 0UL, c,   out c);
+        ulong t5  = CommonMath.Mac(a.L0, a.L5, 0UL, c,   out ulong t6);
+               t3 = CommonMath.Mac(a.L1, a.L2, t3,  0UL, out c);
+               t4 = CommonMath.Mac(a.L1, a.L3, t4,  c,   out c);
+               t5 = CommonMath.Mac(a.L1, a.L4, t5,  c,   out c);
+               t6 = CommonMath.Mac(a.L1, a.L5, t6,  c,   out ulong t7);
+               t5 = CommonMath.Mac(a.L2, a.L3, t5,  0UL, out c);
+               t6 = CommonMath.Mac(a.L2, a.L4, t6,  c,   out c);
+               t7 = CommonMath.Mac(a.L2, a.L5, t7,  c,   out ulong t8);
+               t7 = CommonMath.Mac(a.L3, a.L4, t7,  0UL, out c);
+               t8 = CommonMath.Mac(a.L3, a.L5, t8,  c,   out ulong t9);
+               t9 = CommonMath.Mac(a.L4, a.L5, t9,  0UL, out ulong t10);
+        // Phase 2: double the cross-products (left-shift the 640-bit value by 1)
+        ulong t11 = t10 >> 63;
+              t10 = (t10 << 1) | (t9  >> 63);
+               t9 = (t9  << 1) | (t8  >> 63);
+               t8 = (t8  << 1) | (t7  >> 63);
+               t7 = (t7  << 1) | (t6  >> 63);
+               t6 = (t6  << 1) | (t5  >> 63);
+               t5 = (t5  << 1) | (t4  >> 63);
+               t4 = (t4  << 1) | (t3  >> 63);
+               t3 = (t3  << 1) | (t2  >> 63);
+               t2 = (t2  << 1) | (t1  >> 63);
+               t1 <<= 1;
+        // Phase 3: add diagonal terms a[i]²
+        ulong t0  = CommonMath.Mac(a.L0, a.L0, 0UL, 0UL, out c);
+               t1 = CommonMath.AddCarry(t1,  c,   0UL, out c);
+               t2 = CommonMath.Mac(a.L1, a.L1, t2,  c,   out c);
+               t3 = CommonMath.AddCarry(t3,  c,   0UL, out c);
+               t4 = CommonMath.Mac(a.L2, a.L2, t4,  c,   out c);
+               t5 = CommonMath.AddCarry(t5,  c,   0UL, out c);
+               t6 = CommonMath.Mac(a.L3, a.L3, t6,  c,   out c);
+               t7 = CommonMath.AddCarry(t7,  c,   0UL, out c);
+               t8 = CommonMath.Mac(a.L4, a.L4, t8,  c,   out c);
+               t9 = CommonMath.AddCarry(t9,  c,   0UL, out c);
+              t10 = CommonMath.Mac(a.L5, a.L5, t10, c,   out c);
+              t11 = CommonMath.AddCarry(t11, c,   0UL, out _);
+        return MontgomeryReduce(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11);
+    }
 
     /// <summary>
     /// Computes the additive inverse <c>(-value) mod p</c>.
@@ -161,6 +249,69 @@ public readonly partial struct Fp
         return t;
     }
     
+    /// <summary>
+    /// Fully unrolled Montgomery reduction on a 768-bit product given as 12 limbs.
+    /// Called by <see cref="Multiply"/> and <see cref="Square"/>. No heap allocation.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Fp MontgomeryReduce(
+        ulong t0,  ulong t1,  ulong t2,  ulong t3,  ulong t4,  ulong t5,
+        ulong t6,  ulong t7,  ulong t8,  ulong t9,  ulong t10, ulong t11)
+    {
+        ulong c, k;
+        k  = unchecked(t0 * MontgomeryInv);
+        CommonMath.Mac(k, Modulus.L0, t0,  0UL, out c);
+        ulong r1 = CommonMath.Mac(k, Modulus.L1, t1,  c, out c);
+        ulong r2 = CommonMath.Mac(k, Modulus.L2, t2,  c, out c);
+        ulong r3 = CommonMath.Mac(k, Modulus.L3, t3,  c, out c);
+        ulong r4 = CommonMath.Mac(k, Modulus.L4, t4,  c, out c);
+        ulong r5 = CommonMath.Mac(k, Modulus.L5, t5,  c, out c);
+        ulong r6 = CommonMath.AddCarry(t6,  c,   0UL, out ulong r7);
+        k  = unchecked(r1 * MontgomeryInv);
+        CommonMath.Mac(k, Modulus.L0, r1,  0UL, out c);
+               r2 = CommonMath.Mac(k, Modulus.L1, r2,  c, out c);
+               r3 = CommonMath.Mac(k, Modulus.L2, r3,  c, out c);
+               r4 = CommonMath.Mac(k, Modulus.L3, r4,  c, out c);
+               r5 = CommonMath.Mac(k, Modulus.L4, r5,  c, out c);
+               r6 = CommonMath.Mac(k, Modulus.L5, r6,  c, out c);
+               r7 = CommonMath.AddCarry(t7,  c,   r7,  out ulong r8);
+        k  = unchecked(r2 * MontgomeryInv);
+        CommonMath.Mac(k, Modulus.L0, r2,  0UL, out c);
+               r3 = CommonMath.Mac(k, Modulus.L1, r3,  c, out c);
+               r4 = CommonMath.Mac(k, Modulus.L2, r4,  c, out c);
+               r5 = CommonMath.Mac(k, Modulus.L3, r5,  c, out c);
+               r6 = CommonMath.Mac(k, Modulus.L4, r6,  c, out c);
+               r7 = CommonMath.Mac(k, Modulus.L5, r7,  c, out c);
+               r8 = CommonMath.AddCarry(t8,  c,   r8,  out ulong r9);
+        k  = unchecked(r3 * MontgomeryInv);
+        CommonMath.Mac(k, Modulus.L0, r3,  0UL, out c);
+               r4 = CommonMath.Mac(k, Modulus.L1, r4,  c, out c);
+               r5 = CommonMath.Mac(k, Modulus.L2, r5,  c, out c);
+               r6 = CommonMath.Mac(k, Modulus.L3, r6,  c, out c);
+               r7 = CommonMath.Mac(k, Modulus.L4, r7,  c, out c);
+               r8 = CommonMath.Mac(k, Modulus.L5, r8,  c, out c);
+               r9 = CommonMath.AddCarry(t9,  c,   r9,  out ulong r10);
+        k  = unchecked(r4 * MontgomeryInv);
+        CommonMath.Mac(k, Modulus.L0, r4,  0UL, out c);
+               r5 = CommonMath.Mac(k, Modulus.L1, r5,  c, out c);
+               r6 = CommonMath.Mac(k, Modulus.L2, r6,  c, out c);
+               r7 = CommonMath.Mac(k, Modulus.L3, r7,  c, out c);
+               r8 = CommonMath.Mac(k, Modulus.L4, r8,  c, out c);
+               r9 = CommonMath.Mac(k, Modulus.L5, r9,  c, out c);
+              r10 = CommonMath.AddCarry(t10, c,   r10, out ulong r11);
+        k  = unchecked(r5 * MontgomeryInv);
+        CommonMath.Mac(k, Modulus.L0, r5,  0UL, out c);
+               r6 = CommonMath.Mac(k, Modulus.L1, r6,  c, out c);
+               r7 = CommonMath.Mac(k, Modulus.L2, r7,  c, out c);
+               r8 = CommonMath.Mac(k, Modulus.L3, r8,  c, out c);
+               r9 = CommonMath.Mac(k, Modulus.L4, r9,  c, out c);
+              r10 = CommonMath.Mac(k, Modulus.L5, r10, c, out c);
+              r11 = CommonMath.AddCarry(t11, c,   r11, out _);
+        Fp r = new(r6, r7, r8, r9, r10, r11);
+        Fp rMinusP = SubtractUnchecked(r, Modulus, out ulong borrow);
+        return ConditionalSelect(borrow ^ 1UL, rMinusP, r);
+    }
+
     /// <summary>
     /// Performs Montgomery reduction on a 768-bit intermediate product.
     /// </summary>

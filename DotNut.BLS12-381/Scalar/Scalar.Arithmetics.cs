@@ -38,16 +38,64 @@ public readonly partial struct Scalar
     }
 
     /// <summary>
-    /// Returns a · b in Fr using Montgomery multiplication: MontgomeryReduce(a_limbs · b_limbs).
+    /// Returns a · b in Fr using a fully unrolled 4×4 schoolbook multiply. No heap allocation.
     /// Both inputs must be in Montgomery form.
     /// </summary>
-    public static Scalar Mul(Scalar a, Scalar b) => MontgomeryReduce(MultiplyWide(a, b));
+    public static Scalar Mul(Scalar a, Scalar b)
+    {
+        ulong c;
+        ulong t0 = CommonMath.Mac(a.L0, b.L0, 0UL, 0UL, out c);
+        ulong t1 = CommonMath.Mac(a.L0, b.L1, 0UL, c,   out c);
+        ulong t2 = CommonMath.Mac(a.L0, b.L2, 0UL, c,   out c);
+        ulong t3 = CommonMath.Mac(a.L0, b.L3, 0UL, c,   out ulong t4);
+              t1 = CommonMath.Mac(a.L1, b.L0, t1,  0UL, out c);
+              t2 = CommonMath.Mac(a.L1, b.L1, t2,  c,   out c);
+              t3 = CommonMath.Mac(a.L1, b.L2, t3,  c,   out c);
+              t4 = CommonMath.Mac(a.L1, b.L3, t4,  c,   out ulong t5);
+              t2 = CommonMath.Mac(a.L2, b.L0, t2,  0UL, out c);
+              t3 = CommonMath.Mac(a.L2, b.L1, t3,  c,   out c);
+              t4 = CommonMath.Mac(a.L2, b.L2, t4,  c,   out c);
+              t5 = CommonMath.Mac(a.L2, b.L3, t5,  c,   out ulong t6);
+              t3 = CommonMath.Mac(a.L3, b.L0, t3,  0UL, out c);
+              t4 = CommonMath.Mac(a.L3, b.L1, t4,  c,   out c);
+              t5 = CommonMath.Mac(a.L3, b.L2, t5,  c,   out c);
+              t6 = CommonMath.Mac(a.L3, b.L3, t6,  c,   out ulong t7);
+        return MontgomeryReduce(t0, t1, t2, t3, t4, t5, t6, t7);
+    }
 
     /// <summary>
-    /// Returns a² in Fr using Montgomery multiplication applied to the wide square.
-    /// Input must be in Montgomery form.
+    /// Returns a² in Fr using the Comba squaring method (upper-triangle + doubling + diagonal).
+    /// No heap allocation. Input must be in Montgomery form.
     /// </summary>
-    public static Scalar Square(Scalar a) => MontgomeryReduce(SquareWide(a));
+    public static Scalar Square(Scalar a)
+    {
+        ulong c;
+        // Phase 1: upper-triangle cross-products
+        ulong r1 = CommonMath.Mac(a.L0, a.L1, 0UL, 0UL, out c);
+        ulong r2 = CommonMath.Mac(a.L0, a.L2, 0UL, c,   out c);
+        ulong r3 = CommonMath.Mac(a.L0, a.L3, 0UL, c,   out ulong r4);
+               r3 = CommonMath.Mac(a.L1, a.L2, r3,  0UL, out c);
+               r4 = CommonMath.Mac(a.L1, a.L3, r4,  c,   out ulong r5);
+               r5 = CommonMath.Mac(a.L2, a.L3, r5,  0UL, out ulong r6);
+        // Phase 2: double the cross-products
+        ulong r7 = r6 >> 63;
+              r6 = (r6 << 1) | (r5 >> 63);
+              r5 = (r5 << 1) | (r4 >> 63);
+              r4 = (r4 << 1) | (r3 >> 63);
+              r3 = (r3 << 1) | (r2 >> 63);
+              r2 = (r2 << 1) | (r1 >> 63);
+              r1 <<= 1;
+        // Phase 3: add diagonal terms a[i]²
+        ulong r0 = CommonMath.Mac(a.L0, a.L0, 0UL, 0UL, out c);
+               r1 = CommonMath.AddCarry(r1, c,   0UL, out c);
+               r2 = CommonMath.Mac(a.L1, a.L1, r2,  c,   out c);
+               r3 = CommonMath.AddCarry(r3, c,   0UL, out c);
+               r4 = CommonMath.Mac(a.L2, a.L2, r4,  c,   out c);
+               r5 = CommonMath.AddCarry(r5, c,   0UL, out c);
+               r6 = CommonMath.Mac(a.L3, a.L3, r6,  c,   out c);
+               r7 = CommonMath.AddCarry(r7, c,   0UL, out _);
+        return MontgomeryReduce(r0, r1, r2, r3, r4, r5, r6, r7);
+    }
 
     /// <summary>
     /// Returns −a in Fr. Returns zero if a is zero (branchless).
@@ -162,6 +210,44 @@ public readonly partial struct Scalar
             t[i + 4] = carry;
         }
         return t;
+    }
+
+    /// <summary>
+    /// Fully unrolled Montgomery reduction on a 512-bit product given as 8 limbs.
+    /// Called by <see cref="Mul"/> and <see cref="Square"/>. No heap allocation.
+    /// </summary>
+    private static Scalar MontgomeryReduce(
+        ulong t0, ulong t1, ulong t2, ulong t3,
+        ulong t4, ulong t5, ulong t6, ulong t7)
+    {
+        ulong c, k;
+        k  = unchecked(t0 * MontgomeryInv);
+        CommonMath.Mac(k, GroupOrderR.L0, t0, 0UL, out c);
+        ulong r1 = CommonMath.Mac(k, GroupOrderR.L1, t1, c, out c);
+        ulong r2 = CommonMath.Mac(k, GroupOrderR.L2, t2, c, out c);
+        ulong r3 = CommonMath.Mac(k, GroupOrderR.L3, t3, c, out c);
+        ulong r4 = CommonMath.AddCarry(t4, c, 0UL, out ulong r5);
+        k  = unchecked(r1 * MontgomeryInv);
+        CommonMath.Mac(k, GroupOrderR.L0, r1, 0UL, out c);
+               r2 = CommonMath.Mac(k, GroupOrderR.L1, r2, c, out c);
+               r3 = CommonMath.Mac(k, GroupOrderR.L2, r3, c, out c);
+               r4 = CommonMath.Mac(k, GroupOrderR.L3, r4, c, out c);
+               r5 = CommonMath.AddCarry(t5, c, r5, out ulong r6);
+        k  = unchecked(r2 * MontgomeryInv);
+        CommonMath.Mac(k, GroupOrderR.L0, r2, 0UL, out c);
+               r3 = CommonMath.Mac(k, GroupOrderR.L1, r3, c, out c);
+               r4 = CommonMath.Mac(k, GroupOrderR.L2, r4, c, out c);
+               r5 = CommonMath.Mac(k, GroupOrderR.L3, r5, c, out c);
+               r6 = CommonMath.AddCarry(t6, c, r6, out ulong r7);
+        k  = unchecked(r3 * MontgomeryInv);
+        CommonMath.Mac(k, GroupOrderR.L0, r3, 0UL, out c);
+               r4 = CommonMath.Mac(k, GroupOrderR.L1, r4, c, out c);
+               r5 = CommonMath.Mac(k, GroupOrderR.L2, r5, c, out c);
+               r6 = CommonMath.Mac(k, GroupOrderR.L3, r6, c, out c);
+               r7 = CommonMath.AddCarry(t7, c, r7, out _);
+        Scalar r = new(r4, r5, r6, r7);
+        Scalar rMinusM = SubUnchecked(r, GroupOrderR, out ulong borrow);
+        return ConditionalSelect(borrow ^ 1UL, rMinusM, r);
     }
 
     /// <summary>
