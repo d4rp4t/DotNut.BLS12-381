@@ -139,7 +139,7 @@ public readonly partial struct G2Projective(Fp2 x, Fp2 y, Fp2 z)
         t1 = Fp2.Multiply(p.X, p.Y);
         x3 = Fp2.Multiply(t0, t1);
         x3 = Fp2.Add(x3, x3);
-        return p.IsInfinity ? Infinity : new G2Projective(x3, y3, z3);
+        return ConditionalSelect(new G2Projective(x3, y3, z3), Infinity, p.IsInfinity);
     }
 
     /// <summary>
@@ -178,9 +178,11 @@ public readonly partial struct G2Projective(Fp2 x, Fp2 y, Fp2 z)
     /// </summary>
     public G2Affine ToAffine()
     {
-        if (IsInfinity) return G2Affine.Infinity;
         var zInv = Fp2.Invert(Z);
-        return new G2Affine(Fp2.Multiply(X, zInv), Fp2.Multiply(Y, zInv));
+        return G2Affine.ConditionalSelect(
+            new G2Affine(Fp2.Multiply(X, zInv), Fp2.Multiply(Y, zInv)),
+            G2Affine.Infinity,
+            IsInfinity);
     }
 
     /// <summary>Converts to affine and checks the G2 curve equation. See <see cref="G2Affine.IsOnCurve"/>.</summary>

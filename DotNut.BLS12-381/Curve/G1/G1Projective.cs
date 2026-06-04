@@ -133,7 +133,7 @@ public readonly partial struct G1Projective(Fp x, Fp y, Fp z)
         t1 = Fp.Multiply(p.X, p.Y);
         x3 = Fp.Multiply(t0, t1);
         x3 = Fp.Add(x3, x3);
-        return p.IsInfinity ? Infinity : new G1Projective(x3, y3, z3);
+        return ConditionalSelect(new G1Projective(x3, y3, z3), Infinity, p.IsInfinity);
     }
 
     /// <summary>
@@ -172,9 +172,11 @@ public readonly partial struct G1Projective(Fp x, Fp y, Fp z)
     /// </summary>
     public G1Affine ToAffine()
     {
-        if (IsInfinity) return G1Affine.Infinity;
         var zInv = Fp.Invert(Z);
-        return new G1Affine(Fp.Multiply(X, zInv), Fp.Multiply(Y, zInv));
+        return G1Affine.ConditionalSelect(
+            new G1Affine(Fp.Multiply(X, zInv), Fp.Multiply(Y, zInv)),
+            G1Affine.Infinity,
+            IsInfinity);
     }
 
     /// <summary>Converts to affine and checks the curve equation. See <see cref="G1Affine.IsOnCurve"/>.</summary>

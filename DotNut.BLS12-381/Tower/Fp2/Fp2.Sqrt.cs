@@ -39,14 +39,11 @@ public readonly partial struct Fp2
         var alpha = Multiply(Square(a1), value);
         var x0 = Multiply(a1, value);
 
-        // alpha == -1 case: sqrt = x0.c1 - x0.c0*u
-        if (Equal(Add(alpha, One), Zero))
-        {
-            sqrt = new Fp2(x0.C1, Fp.Negate(x0.C0));
-            return true;
-        }
-
-        // General case: sqrt = (1 + alpha)^((p-1)/2) * x0
+        // Compute both candidate square roots without branching on alpha.
+        // When alpha == -1 the correct root is (x0.C1, -x0.C0); otherwise it is b*x0.
+        // Using ConditionalSelect keeps execution time independent of the input.
+        var isNegOne = Equal(Add(alpha, One), Zero);
+        var sqrtIfNegOne = new Fp2(x0.C1, Fp.Negate(x0.C0));
         var b = PowVartime(Add(One, alpha), [
             0xdcff7fffffffd555UL,
             0x0f55ffff58a9ffffUL,
@@ -55,7 +52,7 @@ public readonly partial struct Fp2
             0x258dd3db21a5d66bUL,
             0x0d0088f51cbff34dUL
         ]);
-        sqrt = Multiply(b, x0);
+        sqrt = ConditionalSelect(Multiply(b, x0), sqrtIfNegOne, isNegOne);
         return Equal(Square(sqrt), value);
     }
 
