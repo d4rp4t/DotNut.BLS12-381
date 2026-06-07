@@ -43,9 +43,20 @@ jobs:
         if: steps.tag_check.outputs.exists == 'false'
         run: dotnet pack DotNut.BLS12-381/DotNut.BLS12-381.csproj -c Release -o ./nupkg
 
+      - name: NuGet login (OIDC → temp API key)
+        if: steps.tag_check.outputs.exists == 'false'
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Push to NuGet.org
         if: steps.tag_check.outputs.exists == 'false'
-        run: dotnet nuget push ./nupkg/*.nupkg --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: |
+          dotnet nuget push ./nupkg/*.nupkg \
+            --api-key "${{ steps.login.outputs.token }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
 
       - name: Push to GitHub Packages
         if: steps.tag_check.outputs.exists == 'false'
