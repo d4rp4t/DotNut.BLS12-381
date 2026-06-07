@@ -26,3 +26,34 @@ jobs:
 
       - name: Test
         run: dotnet test --no-build -c Release --logger "console;verbosity=normal"
+
+  tag:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from csproj
+        id: version
+        run: |
+          VERSION=$(grep -oP '(?<=<Version>)[^<]+' DotNut.BLS12-381/DotNut.BLS12-381.csproj)
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create tag if version is new
+        run: |
+          TAG="v${{ steps.version.outputs.value }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, skipping."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "$TAG"
+            git push origin "$TAG"
+            echo "Created tag $TAG"
+          fi
