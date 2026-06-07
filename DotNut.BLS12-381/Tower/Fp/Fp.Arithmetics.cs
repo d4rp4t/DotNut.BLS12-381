@@ -9,6 +9,7 @@ public readonly partial struct Fp
     /// Computes <c>(a + b) mod p</c>.
     /// </summary>
     /// <returns>The sum reduced modulo the field modulus.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Fp Add(Fp a, Fp b)
     {
         Fp r = AddUnchecked(a, b, out ulong carry);
@@ -21,6 +22,7 @@ public readonly partial struct Fp
     /// Computes <c>(a - b) mod p</c>.
     /// </summary>
     /// <returns>The difference reduced modulo the field modulus.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Fp Subtract(Fp a, Fp b)
     {
         Fp r = SubtractUnchecked(a, b, out ulong borrow);
@@ -33,7 +35,8 @@ public readonly partial struct Fp
     /// Both operands are assumed to be in Montgomery form.
     /// Uses a fully unrolled 6×6 schoolbook multiply to avoid heap allocation.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static Fp Multiply(Fp a, Fp b)
     {
         ulong c;
@@ -81,7 +84,8 @@ public readonly partial struct Fp
     /// upper-triangle cross-products, double via bit-shift, add diagonal terms.
     /// No heap allocation.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static Fp Square(Fp a)
     {
         ulong c;
@@ -132,6 +136,7 @@ public readonly partial struct Fp
     /// <summary>
     /// Computes the additive inverse <c>(-value) mod p</c>.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Fp Negate(Fp value)
     {
         Fp neg = SubtractUnchecked(Modulus, value, out _);
@@ -151,6 +156,7 @@ public readonly partial struct Fp
     /// <remarks>
     /// Uses exponentiation by <c>p - 2</c> (Fermat's little theorem).
     /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public static Fp Invert(Fp value)
     {
         if (Equal(value, Zero))
@@ -253,7 +259,8 @@ public readonly partial struct Fp
     /// Fully unrolled Montgomery reduction on a 768-bit product given as 12 limbs.
     /// Called by <see cref="Multiply"/> and <see cref="Square"/>. No heap allocation.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static Fp MontgomeryReduce(
         ulong t0,  ulong t1,  ulong t2,  ulong t3,  ulong t4,  ulong t5,
         ulong t6,  ulong t7,  ulong t8,  ulong t9,  ulong t10, ulong t11)

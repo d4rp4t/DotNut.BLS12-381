@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace DotNut.BLS12_381.Tower;
 
 public readonly partial struct Fp2
@@ -6,6 +8,7 @@ public readonly partial struct Fp2
     /// Returns a + b in Fp2. Delegates to component-wise <see cref="Fp.Add"/>.
     /// Both inputs must be in Montgomery form with each Fp component in [0, p).
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Fp2 Add(Fp2 a, Fp2 b)
     {
         return new Fp2(
@@ -18,6 +21,7 @@ public readonly partial struct Fp2
     /// Returns a − b in Fp2. Delegates to component-wise <see cref="Fp.Subtract"/>.
     /// Both inputs must be in Montgomery form with each Fp component in [0, p).
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Fp2 Subtract(Fp2 a, Fp2 b)
     {
         return new Fp2(
@@ -30,6 +34,7 @@ public readonly partial struct Fp2
     /// Returns −a in Fp2. Delegates to component-wise <see cref="Fp.Negate"/>.
     /// Input must be in Montgomery form with each Fp component in [0, p).
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Fp2 Negate(Fp2 a)
     {
         return new Fp2(Fp.Negate(a.C0), Fp.Negate(a.C1));
@@ -40,6 +45,7 @@ public readonly partial struct Fp2
     /// where u² = −1. Uses 4 Fp multiplications.
     /// Both inputs must be in Montgomery form with each Fp component in [0, p).
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static Fp2 Multiply(Fp2 a, Fp2 b)
     {
         // (a0 + a1*u)(b0 + b1*u), u^2 = -1
@@ -55,6 +61,7 @@ public readonly partial struct Fp2
     /// Uses 2 Fp squarings and 1 Fp multiplication, fewer than calling <see cref="Multiply"/>(a, a).
     /// Input must be in Montgomery form with each Fp component in [0, p).
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static Fp2 Square(Fp2 a)
     {
         // (a0 + a1*u)^2 = (a0^2 - a1^2) + 2*a0*a1*u
@@ -71,6 +78,7 @@ public readonly partial struct Fp2
     /// The denominator a0² + a1² is an element of Fp; its inverse is computed via <see cref="Fp.Invert"/>.
     /// </summary>
     /// <remarks>Behaviour for the zero element is determined by <see cref="Fp.Invert"/>.</remarks>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public static Fp2 Invert(Fp2 a)
     {
         // (a0 + a1*u)^-1 = (a0 - a1*u)/(a0^2 + a1^2)
@@ -87,6 +95,7 @@ public readonly partial struct Fp2
     /// Expands to (a0 − a1) + (a0 + a1)·u. Used extensively in Fp6 arithmetic.
     /// Input must be in Montgomery form with each Fp component in [0, p).
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Fp2 MultiplyByNonResidue(Fp2 a)
     {
         // (a0 + a1*u) * (1 + u) = (a0 - a1) + (a0 + a1)u

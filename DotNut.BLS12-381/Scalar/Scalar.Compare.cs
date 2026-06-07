@@ -26,7 +26,7 @@ public readonly partial struct Scalar
     /// <summary>
     /// Compares two scalars by their canonical value in [0, r).
     /// Converts both to canonical form first, then compares MSB-first using <see cref="CommonMath.CmpLimb"/>.
-    /// Not constant-time.
+    /// Constant-time: all limbs are always processed; <see cref="CommonMath.CmpLimb"/> is branchless.
     /// </summary>
     /// <returns>Negative if a &lt; b, zero if a == b, positive if a &gt; b.</returns>
     public static int Compare(Scalar a, Scalar b)

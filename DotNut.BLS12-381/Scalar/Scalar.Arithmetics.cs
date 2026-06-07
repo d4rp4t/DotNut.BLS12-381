@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace DotNut.BLS12_381;
 
 public readonly partial struct Scalar
@@ -18,6 +20,7 @@ public readonly partial struct Scalar
     /// Returns a + b in Fr. Adds the raw limbs, then conditionally subtracts r to keep the result in [0, r).
     /// Inputs must be in Montgomery form (i.e. both are valid scalar field elements).
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Scalar Add(Scalar a, Scalar b)
     {
         Scalar r = AddUnchecked(a, b, out ulong carry);
@@ -30,6 +33,7 @@ public readonly partial struct Scalar
     /// Returns a − b in Fr. Subtracts the raw limbs, then conditionally adds r on underflow.
     /// Inputs must be in Montgomery form.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Scalar Sub(Scalar a, Scalar b)
     {
         Scalar r = SubUnchecked(a, b, out ulong borrow);
@@ -41,6 +45,8 @@ public readonly partial struct Scalar
     /// Returns a · b in Fr using a fully unrolled 4×4 schoolbook multiply. No heap allocation.
     /// Both inputs must be in Montgomery form.
     /// </summary>
+    [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static Scalar Mul(Scalar a, Scalar b)
     {
         ulong c;
@@ -67,6 +73,8 @@ public readonly partial struct Scalar
     /// Returns a² in Fr using the Comba squaring method (upper-triangle + doubling + diagonal).
     /// No heap allocation. Input must be in Montgomery form.
     /// </summary>
+    [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static Scalar Square(Scalar a)
     {
         ulong c;
@@ -101,6 +109,7 @@ public readonly partial struct Scalar
     /// Returns −a in Fr. Returns zero if a is zero (branchless).
     /// Input must be in Montgomery form.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Scalar Negate(Scalar a)
     {
         Scalar neg = SubUnchecked(GroupOrderR, a, out _);
@@ -112,6 +121,7 @@ public readonly partial struct Scalar
     /// Implemented as a constant-time square-and-multiply over a fixed 256-bit exponent.
     /// </summary>
     /// <exception cref="DivideByZeroException">Thrown if <paramref name="a"/> is zero.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public static Scalar Invert(Scalar a)
     {
         if (IsZero(a))
@@ -152,7 +162,7 @@ public readonly partial struct Scalar
     /// Result raw limbs represent the canonical integer, NOT in Montgomery form.
     /// </summary>
     internal static Scalar ToCanonical(Scalar a) =>
-        MontgomeryReduce([a.L0, a.L1, a.L2, a.L3, 0UL, 0UL, 0UL, 0UL]);
+        MontgomeryReduce(a.L0, a.L1, a.L2, a.L3, 0UL, 0UL, 0UL, 0UL);
 
     /// <summary>
     /// Computes the 512-bit product of <paramref name="a"/> × <paramref name="a"/> using the
@@ -216,6 +226,8 @@ public readonly partial struct Scalar
     /// Fully unrolled Montgomery reduction on a 512-bit product given as 8 limbs.
     /// Called by <see cref="Mul"/> and <see cref="Square"/>. No heap allocation.
     /// </summary>
+    [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static Scalar MontgomeryReduce(
         ulong t0, ulong t1, ulong t2, ulong t3,
         ulong t4, ulong t5, ulong t6, ulong t7)
@@ -287,6 +299,7 @@ public readonly partial struct Scalar
     /// <paramref name="whenZero"/> if <paramref name="bit"/> = 0.
     /// Does not perform any field arithmetic.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static Scalar ConditionalSelect(ulong bit, Scalar whenOne, Scalar whenZero)
     {
         ulong mask = 0UL - bit;
@@ -302,6 +315,7 @@ public readonly partial struct Scalar
     /// Adds the raw limbs of a and b, propagating carries. Does NOT reduce modulo r.
     /// Sets <paramref name="carry"/> to 1 if the result overflowed 256 bits.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static Scalar AddUnchecked(Scalar a, Scalar b, out ulong carry)
     {
         ulong c = 0;
@@ -316,6 +330,7 @@ public readonly partial struct Scalar
     /// Subtracts the raw limbs of b from a, propagating borrows. Does NOT reduce modulo r.
     /// Sets <paramref name="borrow"/> to 1 if the result underflowed.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static Scalar SubUnchecked(Scalar a, Scalar b, out ulong borrow)
     {
         ulong brrw = 0;

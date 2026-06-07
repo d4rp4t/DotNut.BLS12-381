@@ -1,4 +1,3 @@
-using DotNut.BLS12_381.Curve.G1;
 using DotNut.BLS12_381.Tower;
 
 namespace DotNut.BLS12_381.Curve.G2;
