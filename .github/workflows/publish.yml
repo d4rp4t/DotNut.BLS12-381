@@ -54,7 +54,6 @@ jobs:
         if: steps.tag_check.outputs.exists == 'false'
         run: |
           dotnet nuget push ./nupkg/*.nupkg \
-            --api-key "${{ steps.login.outputs.token }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
 
