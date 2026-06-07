@@ -7,10 +7,24 @@
         <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+        <PackageId>DotNut.BLS12-381</PackageId>
+        <Version>0.1.0-alpha</Version>
+        <Authors>d4rp4t</Authors>
+        <Description>BLS12-381 pairing-friendly elliptic curve library for .NET 8. Implements Fp, Fp2, Fp6, Fp12 tower arithmetic, G1/G2 curve operations, optimal Ate pairing, and RFC 9380 hash-to-curve. Field arithmetic is fully unrolled with no heap allocation. Constant-time scalar multiplication via Montgomery ladder. Not security-audited — use in production at your own risk.</Description>
+        <PackageTags>bls12-381;elliptic-curve;pairing;cryptography;zk-snarks;bls-signature;hash-to-curve</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryType>git</RepositoryType>
+        <RepositoryUrl>https://github.com/d4rp4t/DotNut.BLS12-381</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>
       <InternalsVisibleTo Include="DotNut.BLS12-381.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="..\readme.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 
 </Project>
