@@ -1,7 +1,5 @@
 # DotNut.BLS12-381
 
-> **Work in progress**
->
 > This repository contains a native C# implementation of the **BLS12-381** elliptic curve.
 >
 > **The author is not a cryptographer, and this code has not been audited.  
