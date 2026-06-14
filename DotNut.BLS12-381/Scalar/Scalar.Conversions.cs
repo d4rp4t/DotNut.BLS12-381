@@ -30,6 +30,20 @@ public readonly partial struct Scalar
     /// <returns>The scalar k mod r in Montgomery form.</returns>
     public static Scalar FromBigInteger(BigInteger k)
     {
+        if (k.Sign < 0)
+            throw new ArgumentOutOfRangeException(nameof(k), "Value must be non-negative.");
+
+        // Reduce mod r before extracting bytes so that inputs >= 2^256 are handled
+        // correctly. TryWriteBytes silently writes nothing when the buffer is too
+        // small (k >= 2^256), which previously produced Scalar.Zero instead of
+        // k mod r.
+        Span<byte> rBuf = stackalloc byte[33]; // extra zero byte → positive unsigned
+        BinaryPrimitives.WriteUInt64LittleEndian(rBuf,        GroupOrderR.L0);
+        BinaryPrimitives.WriteUInt64LittleEndian(rBuf[8..],   GroupOrderR.L1);
+        BinaryPrimitives.WriteUInt64LittleEndian(rBuf[16..],  GroupOrderR.L2);
+        BinaryPrimitives.WriteUInt64LittleEndian(rBuf[24..],  GroupOrderR.L3);
+        k %= new BigInteger(rBuf, isUnsigned: true, isBigEndian: false);
+
         var bytes = new byte[32];
         k.TryWriteBytes(bytes, out _, isUnsigned: true, isBigEndian: false);
         return FromCanonical(new Scalar(
