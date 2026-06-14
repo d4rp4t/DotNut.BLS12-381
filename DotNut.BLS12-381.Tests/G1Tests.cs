@@ -50,6 +50,37 @@ public sealed class G1Tests
 
     #endregion
 
+    #region Non-canonical infinity
+
+    [Fact]
+    public void NonCanonicalInfinity_PreservesAdditiveIdentityInProjectiveAdd()
+    {
+        // G1Affine(X, Y, isInfinity=true) with non-zero X/Y must still act as O
+        // in projective addition; ToProjective must emit canonical (0:1:0).
+        var malformed = new G1Affine(G1Affine.Generator.X, G1Affine.Generator.Y, isInfinity: true);
+        var g = G1Projective.Generator;
+        Assert.True(G1Projective.Add(malformed.ToProjective(), g) == g, "O + G should equal G");
+        Assert.True(G1Projective.Add(g, malformed.ToProjective()) == g, "G + O should equal G");
+    }
+
+    #endregion
+
+    #region Operator regression
+
+    [Fact]
+    public void OperatorMinus_AffineMinusProjective_ReturnsAMinusB()
+    {
+        // G - 2G should equal -G, not +G
+        var gAff = G1Affine.Generator;
+        var gProj = gAff.ToProjective();
+        var twoG = G1Projective.Add(gProj, gProj);
+        var result = gAff - twoG;
+        var expected = G1Projective.Negate(gProj);
+        Assert.True(result == expected);
+    }
+
+    #endregion
+
     #region Helpers
 
     private static bool AffineEqual(G1Affine a, G1Affine b)

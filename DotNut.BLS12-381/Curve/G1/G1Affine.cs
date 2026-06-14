@@ -62,9 +62,15 @@ public readonly partial struct G1Affine(Fp x, Fp y, bool isInfinity = false)
 
     /// <summary>
     /// Converts this affine point to homogeneous projective form without branching.
-    /// Non-infinity: (X, Y, 1). Infinity (X=0, Y=1): (0, 1, 0) = G1Projective.Infinity.
+    /// Non-infinity: (X, Y, 1). Infinity: (0, 1, 0) = G1Projective.Infinity.
+    /// X and Y are forced to their canonical values (0 and 1) when IsInfinity is true
+    /// so that non-canonical affine infinities (arbitrary X, Y, IsInfinity=true) do
+    /// not corrupt Algorithm 7 which requires exactly (0:1:0) as the additive identity.
     /// </summary>
-    public G1Projective ToProjective() => new(X, Y, Fp.ConditionalSelect(Fp.One, Fp.Zero, IsInfinity));
+    public G1Projective ToProjective() => new(
+        Fp.ConditionalSelect(X, Fp.Zero, IsInfinity),
+        Fp.ConditionalSelect(Y, Fp.One,  IsInfinity),
+        Fp.ConditionalSelect(Fp.One, Fp.Zero, IsInfinity));
 
     /// <summary>The non-trivial cube root of unity in Fp; β³ = 1, β ≠ 1.</summary>
     public static readonly Fp Beta = new([
@@ -78,7 +84,7 @@ public readonly partial struct G1Affine(Fp x, Fp y, bool isInfinity = false)
 
     public override bool Equals(object? obj) => obj is G1Affine other && this == other;
 
-    public override int GetHashCode() => HashCode.Combine(X, Y, IsInfinity);
+    public override int GetHashCode() => IsInfinity ? HashCode.Combine(true) : HashCode.Combine(X, Y);
 
     /// <summary>
     /// Returns <paramref name="a"/> if <paramref name="choice"/> is <see langword="false"/>,

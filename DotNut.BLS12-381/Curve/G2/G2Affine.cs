@@ -65,9 +65,15 @@ public readonly partial struct G2Affine(Fp2 x, Fp2 y, bool isInfinity = false)
 
     /// <summary>
     /// Converts this affine point to homogeneous projective form without branching.
-    /// Non-infinity: (X, Y, 1). Infinity (X=0, Y=1): (0, 1, 0) = G2Projective.Infinity.
+    /// Non-infinity: (X, Y, 1). Infinity: (0, 1, 0) = G2Projective.Infinity.
+    /// X and Y are forced to their canonical values (0 and 1) when IsInfinity is true
+    /// so that non-canonical affine infinities (arbitrary X, Y, IsInfinity=true) do
+    /// not corrupt the projective addition algorithm which requires exactly (0:1:0).
     /// </summary>
-    public G2Projective ToProjective() => new(X, Y, Fp2.ConditionalSelect(Fp2.One, Fp2.Zero, IsInfinity));
+    public G2Projective ToProjective() => new(
+        Fp2.ConditionalSelect(X, Fp2.Zero, IsInfinity),
+        Fp2.ConditionalSelect(Y, Fp2.One,  IsInfinity),
+        Fp2.ConditionalSelect(Fp2.One, Fp2.Zero, IsInfinity));
 
     /// <summary>The G2 curve constant B = 4 + 4u (coefficient of the constant term in y² = x³ + B).</summary>
     private static readonly Fp2 CurveB = new(
@@ -96,5 +102,5 @@ public readonly partial struct G2Affine(Fp2 x, Fp2 y, bool isInfinity = false)
 
     public override bool Equals(object? obj) => obj is G2Affine other && this == other;
 
-    public override int GetHashCode() => HashCode.Combine(X, Y, IsInfinity);
+    public override int GetHashCode() => IsInfinity ? HashCode.Combine(true) : HashCode.Combine(X, Y);
 }

@@ -54,6 +54,19 @@ public sealed class G2Tests
 
     #endregion
 
+    #region Non-canonical infinity
+
+    [Fact]
+    public void NonCanonicalInfinity_PreservesAdditiveIdentityInProjectiveAdd()
+    {
+        var malformed = new G2Affine(G2Affine.Generator.X, G2Affine.Generator.Y, isInfinity: true);
+        var g = G2Projective.Generator;
+        Assert.True(G2Projective.Add(malformed.ToProjective(), g) == g, "O + G should equal G");
+        Assert.True(G2Projective.Add(g, malformed.ToProjective()) == g, "G + O should equal G");
+    }
+
+    #endregion
+
     #region Helpers
 
     private static bool AffineEqual(G2Affine a, G2Affine b)
