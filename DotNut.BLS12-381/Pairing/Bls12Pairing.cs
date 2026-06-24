@@ -74,6 +74,11 @@ public static class Bls12Pairing
     public static MillerLoopResult MultiMillerLoop(IEnumerable<(G1Affine P, G2Prepared Q)> terms)
     {
         var termList = terms.ToList();
+
+        foreach (var (p, _) in termList)
+            if (!p.IsInfinity && !p.IsInSubgroup())
+                throw new ArgumentException("G1 point is not in the correct prime-order subgroup.");
+
         var f = Fp12.One;
         var coeffIdx = 0;
         var foundOne = false;
@@ -114,6 +119,9 @@ public static class Bls12Pairing
     /// </summary>
     internal static G2Prepared BuildG2Prepared(G2Affine q)
     {
+        if (!q.IsInfinity && !q.IsInSubgroup())
+            throw new ArgumentException("G2 point is not in the correct prime-order subgroup.", nameof(q));
+
         var isInfinity = q.IsInfinity;
         // Use generator as stand-in for infinity to keep valid arithmetic
         var qq = isInfinity ? G2Affine.Generator : q;

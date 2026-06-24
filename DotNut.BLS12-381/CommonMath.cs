@@ -79,8 +79,11 @@ internal static class CommonMath
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void CmpLimb(ulong a, ulong b, ref ulong gt, ref ulong lt)
     {
-        ulong a_gt_b = (b - a) >> 63;
-        ulong b_gt_a = (a - b) >> 63;
+        // Use SubBorrow to detect carry/borrow, not MSB of the difference.
+        // The MSB trick ((b-a)>>63) fails when a-b > 2^63 because the wrapped
+        // result lands below 2^63, clearing bit 63 even though a > b.
+        SubBorrow(b, a, 0UL, out ulong a_gt_b); // borrow=1 iff b<a, i.e., a>b
+        SubBorrow(a, b, 0UL, out ulong b_gt_a); // borrow=1 iff a<b, i.e., b>a
         ulong undecided = 1 - (gt | lt);
         gt |= undecided & a_gt_b;
         lt |= undecided & b_gt_a;

@@ -232,7 +232,7 @@ public readonly partial struct G1Projective(Fp x, Fp y, Fp z)
     /// <summary>Returns P − Q as P + (−Q).</summary>
     public static G1Projective Subtract(G1Projective a, G1Affine b) => Add(a, G1Affine.Negate(b));
     /// <summary>Returns P − Q as P + (−Q).</summary>
-    public static G1Projective Subtract(G1Affine a, G1Projective b) => Add(G1Affine.Negate(a), b);
+    public static G1Projective Subtract(G1Affine a, G1Projective b) => Add(a, Negate(b));
     
 
     public override bool Equals(object? obj) => obj is G1Projective other && this == other;
